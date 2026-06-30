@@ -156,6 +156,26 @@ To keep the Web UI running as an auto-starting local service, see [Running Backl
 CLI instructions are the default AI setup. MCP remains supported for AI coding assistants like Claude Code, Codex, Gemini CLI and Kiro when you explicitly prefer an MCP connector.
 You can run `backlog init` (even if you already initialized Backlog.md) and choose MCP integration, or follow the manual steps below.
 
+### Transports: stdio (default) and Streamable HTTP
+
+`backlog mcp start` serves over **stdio** by default — one process per local client.
+
+For a **shared, hosted** MCP server (a single long-lived process for a team), use the
+Streamable HTTP transport:
+
+```bash
+backlog mcp start --http --port 6421 --host 127.0.0.1
+```
+
+Run it **behind an authenticating reverse proxy** (e.g. oauth2-proxy). When the proxy
+forwards the end-user identity headers and `commit_author_from_proxy_headers` is enabled,
+each request's commit is attributed to that user (committer stays the server identity) —
+the same model as the web UI. The transport is stateless, so no per-client process is
+spawned.
+
+See **[Authenticated multi-user hosting](AUTHENTICATED-HOSTING.md)** for an end-to-end
+setup (Keycloak + oauth2-proxy, web + MCP, and the two MCP client auth options).
+
 ### Client guides
 
 <details>
@@ -251,6 +271,7 @@ Backlog.md merges the following layers (highest → lowest):
 Run `backlog config` with no arguments to launch the full interactive wizard. This is the same experience triggered from `backlog init` when you opt into advanced settings, and it walks through the complete configuration surface:
 - Cross-branch accuracy: `checkActiveBranches`, `remoteOperations`, and `activeBranchDays`.
 - Git workflow: `autoCommit` and `bypassGitHooks`.
+- Hosted/web attribution: `commitAuthorFromProxyHeaders` (opt-in, default off) — the web server sets each commit's **author** from the identity forwarded by an auth proxy; the committer stays the server identity. Header names are configurable via `proxyAuthorEmailHeader` (default `x-forwarded-email`) and `proxyAuthorNameHeader` (default `x-forwarded-preferred-username`), matching oauth2-proxy. Only enable behind a proxy you control.
 - ID formatting: enable or size `zeroPaddedIds`.
 - Editor integration: pick a `defaultEditor` with availability checks.
 - Definition of Done defaults: interactively add/remove/reorder/clear project-level `definition_of_done` checklist items.
