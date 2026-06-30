@@ -1,4 +1,4 @@
-import { dirname, join } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 import type { Server, ServerWebSocket } from "bun";
 import { $ } from "bun";
 import { Core } from "../core/backlog.ts";
@@ -188,6 +188,23 @@ export function markHtmlBundleNoStore(bundle: Bun.HTMLBundle): Bun.HTMLBundle {
 }
 
 const spaIndexHtml = markHtmlBundleNoStore(indexHtml);
+
+// Content-Type lookup for files served from the project's static directories
+// (backlog/assets and backlog/attachments). Unknown extensions fall back to
+// application/octet-stream so unexpected files are never mislabeled.
+const ASSET_MIME_TYPES: Record<string, string> = {
+	png: "image/png",
+	jpg: "image/jpeg",
+	jpeg: "image/jpeg",
+	gif: "image/gif",
+	svg: "image/svg+xml",
+	webp: "image/webp",
+	avif: "image/avif",
+	pdf: "application/pdf",
+	txt: "text/plain",
+	css: "text/css",
+	js: "application/javascript",
+};
 
 export class BacklogServer {
 	private core: Core;
@@ -479,6 +496,10 @@ export class BacklogServer {
 					"/assets/*": {
 						GET: async (req: Request) => await this.handleAssetRequest(req),
 					},
+					// Serve files placed under backlog/attachments at /attachments/<relative-path>
+					"/attachments/*": {
+						GET: async (req: Request) => await this.handleAttachmentRequest(req),
+					},
 				},
 				fetch: async (req: Request, server: Server<unknown>) => {
 					const res = await this.handleRequest(req, server);
@@ -617,48 +638,54 @@ export class BacklogServer {
 	}
 
 	private async handleAssetRequest(req: Request): Promise<Response> {
+		return this.serveProjectDirectoryFile(req, "/assets/", "assets");
+	}
+
+	private async handleAttachmentRequest(req: Request): Promise<Response> {
+		return this.serveProjectDirectoryFile(req, "/attachments/", "attachments");
+	}
+
+	/**
+	 * Serve a static file that lives under a sub-directory of the project's `backlog/` root
+	 * (e.g. `backlog/assets` or `backlog/attachments`).
+	 *
+	 * Security: this exposes files from disk, so the requested path is strictly confined to the
+	 * served directory. Absolute paths and any `..` traversal segments are rejected, and the fully
+	 * resolved path is verified to stay inside the served directory before any file is read.
+	 */
+	private async serveProjectDirectoryFile(req: Request, urlPrefix: string, dirName: string): Promise<Response> {
 		try {
 			const url = new URL(req.url);
 			const pathname = decodeURIComponent(url.pathname || "");
-			const prefix = "/assets/";
-			if (!pathname.startsWith(prefix)) return new Response("Not Found", { status: 404 });
+			if (!pathname.startsWith(urlPrefix)) return new Response("Not Found", { status: 404 });
 
-			// Path relative to backlog/assets
-			const relPath = pathname.slice(prefix.length);
+			// Path relative to backlog/<dirName>
+			const relPath = pathname.slice(urlPrefix.length);
 
-			// disallow traversal
-			if (relPath.includes("..")) return new Response("Not Found", { status: 404 });
+			// Reject empty, absolute and traversal paths before touching the filesystem
+			if (relPath.length === 0 || relPath.startsWith("/") || relPath.includes("..")) {
+				return new Response("Not Found", { status: 404 });
+			}
 
-			// derive backlog root from docsDir (parent of backlog/docs)
+			// Derive backlog root from docsDir (parent of backlog/docs)
 			const docsDir = this.core.filesystem.docsDir;
 			const backlogRoot = dirname(docsDir);
-			const assetsRoot = join(backlogRoot, "assets");
-			const filePath = join(assetsRoot, relPath);
+			const rootDir = resolve(backlogRoot, dirName);
+			const filePath = resolve(rootDir, relPath);
 
-			if (!filePath.startsWith(assetsRoot)) return new Response("Not Found", { status: 404 });
+			// Ensure the resolved path stays strictly within the served directory
+			if (filePath !== rootDir && !filePath.startsWith(rootDir + sep)) {
+				return new Response("Not Found", { status: 404 });
+			}
 
 			const file = Bun.file(filePath);
 			if (!(await file.exists())) return new Response("Not Found", { status: 404 });
 
 			const ext = (filePath.match(/\.([^./]+)$/) || [])[1]?.toLowerCase() || "";
-			const mimeMap: Record<string, string> = {
-				png: "image/png",
-				jpg: "image/jpeg",
-				jpeg: "image/jpeg",
-				gif: "image/gif",
-				svg: "image/svg+xml",
-				webp: "image/webp",
-				avif: "image/avif",
-				pdf: "application/pdf",
-				txt: "text/plain",
-				css: "text/css",
-				js: "application/javascript",
-			};
-
-			const mime = mimeMap[ext] ?? "application/octet-stream";
+			const mime = ASSET_MIME_TYPES[ext] ?? "application/octet-stream";
 			return new Response(file, { headers: { "Content-Type": mime } });
 		} catch (error) {
-			console.error("Error serving asset:", error);
+			console.error(`Error serving file from ${dirName}:`, error);
 			return new Response("Internal Server Error", { status: 500 });
 		}
 	}
