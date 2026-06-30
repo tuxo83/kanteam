@@ -1407,6 +1407,12 @@ ${description || `Milestone: ${title}`}`,
 				case "proxy_author_name_header":
 					config.proxyAuthorNameHeader = value;
 					break;
+				case "auto_pull":
+					config.autoPull = value.toLowerCase() === "true";
+					break;
+				case "auto_push":
+					config.autoPush = value.toLowerCase() === "true";
+					break;
 				case "filesystem_only":
 				case "filesystemOnly":
 					config.filesystemOnly = value.toLowerCase() === "true";
@@ -1456,6 +1462,8 @@ ${description || `Milestone: ${title}`}`,
 			commitAuthorFromProxyHeaders: config.commitAuthorFromProxyHeaders,
 			proxyAuthorEmailHeader: config.proxyAuthorEmailHeader,
 			proxyAuthorNameHeader: config.proxyAuthorNameHeader,
+			autoPull: config.autoPull,
+			autoPush: config.autoPush,
 			filesystemOnly: config.filesystemOnly,
 			zeroPaddedIds: config.zeroPaddedIds,
 			bypassGitHooks: config.bypassGitHooks,
@@ -1491,6 +1499,8 @@ ${description || `Milestone: ${title}`}`,
 				: []),
 			...(config.proxyAuthorEmailHeader ? [`proxy_author_email_header: ${config.proxyAuthorEmailHeader}`] : []),
 			...(config.proxyAuthorNameHeader ? [`proxy_author_name_header: ${config.proxyAuthorNameHeader}`] : []),
+			...(typeof config.autoPull === "boolean" ? [`auto_pull: ${config.autoPull}`] : []),
+			...(typeof config.autoPush === "boolean" ? [`auto_push: ${config.autoPush}`] : []),
 			...(typeof config.filesystemOnly === "boolean" ? [`filesystem_only: ${config.filesystemOnly}`] : []),
 			...(typeof config.zeroPaddedIds === "number" ? [`zero_padded_ids: ${config.zeroPaddedIds}`] : []),
 			...(typeof config.bypassGitHooks === "boolean" ? [`bypass_git_hooks: ${config.bypassGitHooks}`] : []),

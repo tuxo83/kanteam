@@ -98,6 +98,8 @@ const CONFIG_GET_KEYS = [
 	"autoOpenBrowser",
 	"remoteOperations",
 	"autoCommit",
+	"autoPull",
+	"autoPush",
 	"filesystemOnly",
 	"bypassGitHooks",
 	"zeroPaddedIds",
@@ -115,6 +117,8 @@ const CONFIG_SET_KEYS = [
 	"defaultPort",
 	"remoteOperations",
 	"autoCommit",
+	"autoPull",
+	"autoPush",
 	"filesystemOnly",
 	"bypassGitHooks",
 	"zeroPaddedIds",
@@ -537,6 +541,21 @@ if (shouldRunMigration) {
 }
 
 const program = new Command();
+
+// Auto-pull (rebase) from remote before every command when config.autoPull is enabled.
+program.hook("preAction", async () => {
+	try {
+		const c = new Core(process.cwd());
+		const cfg = await c.filesystem.loadConfig();
+		if (cfg?.autoPull) {
+			c.gitOps.setConfig(cfg);
+			await c.gitOps.pull();
+		}
+	} catch {
+		// auto-pull must never block a command
+	}
+});
+
 program
 	.name("backlog")
 	.description("Backlog.md - Project management CLI")
@@ -4002,6 +4021,12 @@ addHelpSchema(configCmd.command("get <key>"), {
 				case "proxyAuthorNameHeader":
 					console.log(config.proxyAuthorNameHeader || "");
 					break;
+				case "autoPull":
+					console.log(config.autoPull?.toString() || "false");
+					break;
+				case "autoPush":
+					console.log(config.autoPush?.toString() || "false");
+					break;
 				case "filesystemOnly":
 					console.log(config.filesystemOnly?.toString() || "false");
 					break;
@@ -4020,7 +4045,7 @@ addHelpSchema(configCmd.command("get <key>"), {
 				default:
 					console.error(`Unknown config key: ${key}`);
 					console.error(
-						"Available keys: defaultEditor, projectName, defaultStatus, statuses, labels, milestones, definitionOfDone, dateFormat, maxColumnWidth, defaultPort, autoOpenBrowser, remoteOperations, autoCommit, filesystemOnly, bypassGitHooks, zeroPaddedIds, checkActiveBranches, activeBranchDays",
+						"Available keys: defaultEditor, projectName, defaultStatus, statuses, labels, milestones, definitionOfDone, dateFormat, maxColumnWidth, defaultPort, autoOpenBrowser, remoteOperations, autoCommit, autoPull, autoPush, filesystemOnly, bypassGitHooks, zeroPaddedIds, checkActiveBranches, activeBranchDays",
 					);
 					process.exit(1);
 			}
@@ -4141,12 +4166,36 @@ addHelpSchema(configCmd.command("set <key> <value>"), {
 					}
 					break;
 				}
+				case "autoPull": {
+					const boolValue = value.toLowerCase();
+					if (boolValue === "true" || boolValue === "1" || boolValue === "yes") {
+						config.autoPull = true;
+					} else if (boolValue === "false" || boolValue === "0" || boolValue === "no") {
+						config.autoPull = false;
+					} else {
+						console.error("autoPull must be true or false");
+						process.exit(1);
+					}
+					break;
+				}
 				case "proxyAuthorEmailHeader":
 					config.proxyAuthorEmailHeader = value;
 					break;
 				case "proxyAuthorNameHeader":
 					config.proxyAuthorNameHeader = value;
 					break;
+				case "autoPush": {
+					const boolValue = value.toLowerCase();
+					if (boolValue === "true" || boolValue === "1" || boolValue === "yes") {
+						config.autoPush = true;
+					} else if (boolValue === "false" || boolValue === "0" || boolValue === "no") {
+						config.autoPush = false;
+					} else {
+						console.error("autoPush must be true or false");
+						process.exit(1);
+					}
+					break;
+				}
 				case "filesystemOnly": {
 					const boolValue = value.toLowerCase();
 					if (boolValue === "true" || boolValue === "1" || boolValue === "yes") {
@@ -4237,7 +4286,7 @@ addHelpSchema(configCmd.command("set <key> <value>"), {
 				default:
 					console.error(`Unknown config key: ${key}`);
 					console.error(
-						"Available keys: defaultEditor, projectName, defaultStatus, dateFormat, maxColumnWidth, autoOpenBrowser, defaultPort, remoteOperations, autoCommit, filesystemOnly, bypassGitHooks, zeroPaddedIds, checkActiveBranches, activeBranchDays",
+						"Available keys: defaultEditor, projectName, defaultStatus, dateFormat, maxColumnWidth, autoOpenBrowser, defaultPort, remoteOperations, autoCommit, autoPull, autoPush, filesystemOnly, bypassGitHooks, zeroPaddedIds, checkActiveBranches, activeBranchDays",
 					);
 					process.exit(1);
 			}

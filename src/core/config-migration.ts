@@ -19,6 +19,8 @@ export function migrateConfig(config: Partial<BacklogConfig>): BacklogConfig {
 		commitAuthorFromProxyHeaders: false,
 		proxyAuthorEmailHeader: "x-forwarded-email",
 		proxyAuthorNameHeader: "x-forwarded-preferred-username",
+		autoPull: false,
+		autoPush: false,
 		bypassGitHooks: false,
 		checkActiveBranches: true,
 		activeBranchDays: 30,
@@ -56,6 +58,8 @@ export function needsMigration(config: Partial<BacklogConfig>): boolean {
 		{ field: "commitAuthorFromProxyHeaders", hasDefault: true },
 		{ field: "proxyAuthorEmailHeader", hasDefault: true },
 		{ field: "proxyAuthorNameHeader", hasDefault: true },
+		// NB: autoPull/autoPush are intentionally omitted here (like bypassGitHooks/filesystemOnly):
+		// they must not force a config rewrite on existing projects. Absent => treated as false.
 	];
 
 	return expectedFieldsWithDefaults.some(({ field }) => {

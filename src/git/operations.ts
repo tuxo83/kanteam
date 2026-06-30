@@ -81,6 +81,7 @@ export class GitOperations {
 			return;
 		}
 		await this.execGit(args, { cwd: repoRoot });
+		await this.autoPushIfEnabled(repoRoot);
 	}
 
 	async commitChanges(message: string, repoRoot?: string | null): Promise<void> {
@@ -93,6 +94,7 @@ export class GitOperations {
 		}
 		args.push(...commitAuthorArgs());
 		await this.execGit(args, { cwd: repoRoot ?? undefined });
+		await this.autoPushIfEnabled(repoRoot);
 	}
 
 	async commitFiles(message: string, filePaths: string[], repoRoot?: string | null): Promise<void> {
@@ -134,6 +136,7 @@ export class GitOperations {
 		args.push(...commitAuthorArgs());
 		args.push("--", ...uniqueRelativePaths);
 		await this.execGit(args, { cwd: resolvedRepoRoot });
+		await this.autoPushIfEnabled(resolvedRepoRoot);
 	}
 
 	async resetIndex(repoRoot?: string | null): Promise<void> {
@@ -186,6 +189,31 @@ export class GitOperations {
 		}
 		args.push(...commitAuthorArgs());
 		await this.execGit(args, { cwd: repoRoot ?? undefined });
+		await this.autoPushIfEnabled(repoRoot);
+	}
+
+	/**
+	 * Push the current branch HEAD to the remote. Gated by `remoteOperations` and
+	 * the presence of a remote; never throws, so it cannot block the calling
+	 * operation (network down, non-fast-forward, no upstream, …).
+	 */
+	async push(remote = "origin", repoRoot?: string | null): Promise<void> {
+		await this.loadConfigIfNeeded();
+		if (this.config?.remoteOperations === false) return;
+		if (!(await this.hasAnyRemote())) return;
+		try {
+			await this.execGit(["push", "--quiet", remote, "HEAD"], { cwd: repoRoot ?? undefined });
+		} catch (error) {
+			// Auto-push must never block a commit; swallow expected/transient failures.
+			if (process.env.DEBUG) console.warn(`Push skipped: ${error}`);
+		}
+	}
+
+	/** After a successful commit, push to the remote when `config.autoPush` is enabled. Never throws. */
+	private async autoPushIfEnabled(repoRoot?: string | null): Promise<void> {
+		await this.loadConfigIfNeeded();
+		if (!this.config?.autoPush) return;
+		await this.push("origin", repoRoot);
 	}
 
 	async retryGitOperation<T>(operation: () => Promise<T>, operationName: string, maxRetries = 3): Promise<T> {
@@ -280,6 +308,20 @@ export class GitOperations {
 			}
 			// Re-throw non-network errors
 			throw error;
+		}
+	}
+
+	/** Pull (rebase, autostash) from remote into the working tree. Gated by remoteOperations; never throws. */
+	async pull(remote = "origin"): Promise<void> {
+		await this.loadConfigIfNeeded();
+		if (this.config?.remoteOperations === false) return;
+		const hasRemotes = await this.hasAnyRemote();
+		if (!hasRemotes) return;
+		try {
+			await this.execGit(["pull", "--rebase", "--autostash", "--quiet", remote]);
+		} catch (error) {
+			// Auto-pull must never block a command; swallow (network / no upstream / conflicts).
+			if (process.env.DEBUG) console.warn(`Pull skipped: ${error}`);
 		}
 	}
 
