@@ -28,4 +28,13 @@ describe("MermaidMarkdown", () => {
 		expect(html).toContain('href="ftp://example.com/file"');
 		expect(html).toContain('href="mailto:foo@example.com"');
 	});
+
+	it("renders markdown images with the zoomable lightbox class", () => {
+		const source = "![screenshot](attachments/TASK-1/img.png)";
+		const html = renderToString(<MermaidMarkdown source={source} />);
+
+		expect(html).toContain('src="attachments/TASK-1/img.png"');
+		expect(html).toContain('alt="screenshot"');
+		expect(html).toContain("bl-markdown-img");
+	});
 });

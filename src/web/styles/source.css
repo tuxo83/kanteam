@@ -201,4 +201,56 @@
     .w-md-editor textarea {
         resize: none !important;
     }
+
+    /* Markdown images are clickable to open a full-size lightbox */
+    .wmde-markdown img.bl-markdown-img {
+        cursor: zoom-in;
+    }
+
+    /* Full-screen lightbox overlay for enlarged markdown images.
+       z-index sits above the task modal (z-50). */
+    .bl-lightbox-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem;
+        background: rgba(0, 0, 0, 0.85);
+        cursor: zoom-out;
+    }
+
+    .bl-lightbox-img {
+        max-width: 95vw;
+        max-height: 95vh;
+        object-fit: contain;
+        cursor: default;
+        border-radius: 0.25rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .bl-lightbox-close {
+        position: fixed;
+        top: 1rem;
+        right: 1.25rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        line-height: 1;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.4);
+        border: none;
+        border-radius: var(--radius-circle);
+    }
+
+    .bl-lightbox-close:hover,
+    .bl-lightbox-close:focus-visible {
+        background: rgba(255, 255, 255, 0.2);
+        outline: 2px solid #fff;
+        outline-offset: 2px;
+    }
 }
