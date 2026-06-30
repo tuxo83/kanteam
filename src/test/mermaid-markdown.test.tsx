@@ -37,4 +37,26 @@ describe("MermaidMarkdown", () => {
 		expect(html).toContain('alt="screenshot"');
 		expect(html).toContain("bl-markdown-img");
 	});
+
+	it("turns single newlines into hard line breaks", () => {
+		const source = "First line.\nSecond line.";
+		const html = renderToString(<MermaidMarkdown source={source} />);
+
+		const breakCount = (html.match(/<br[^>]*\/?>/g) || []).length;
+		expect(breakCount).toBeGreaterThanOrEqual(1);
+		expect(html).toContain("First line.");
+		expect(html).toContain("Second line.");
+	});
+
+	it("does not inject line breaks inside fenced code blocks", () => {
+		const source = "```js\nconst a = 1;\nconst b = 2;\n```";
+		const html = renderToString(<MermaidMarkdown source={source} />);
+
+		expect(html).toContain("<pre");
+		expect(html).toContain("<code");
+		// The code block keeps its newlines as a multi-line <pre>/<code>, no <br>.
+		expect(html).not.toContain("<br");
+		expect(html).toContain("const a = 1;");
+		expect(html).toContain("const b = 2;");
+	});
 });
