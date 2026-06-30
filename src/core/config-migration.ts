@@ -55,11 +55,10 @@ export function needsMigration(config: Partial<BacklogConfig>): boolean {
 		{ field: "autoOpenBrowser", hasDefault: true },
 		{ field: "remoteOperations", hasDefault: true },
 		{ field: "autoCommit", hasDefault: true },
-		{ field: "commitAuthorFromProxyHeaders", hasDefault: true },
-		{ field: "proxyAuthorEmailHeader", hasDefault: true },
-		{ field: "proxyAuthorNameHeader", hasDefault: true },
-		// NB: autoPull/autoPush are intentionally omitted here (like bypassGitHooks/filesystemOnly):
-		// they must not force a config rewrite on existing projects. Absent => treated as false.
+		// NB: commitAuthorFromProxyHeaders/proxyAuthor* and autoPull/autoPush are intentionally
+		// omitted here (like bypassGitHooks/filesystemOnly): they must not force a config rewrite
+		// on existing projects (which would dirty the working tree on the next command). They still
+		// default in-memory via migrateConfig(); absent on disk => treated as their default.
 	];
 
 	return expectedFieldsWithDefaults.some(({ field }) => {
