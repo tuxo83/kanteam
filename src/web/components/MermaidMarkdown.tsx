@@ -1,9 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import { renderMermaidIn } from "../utils/mermaid";
 
 interface Props {
 	source: string;
+}
+
+interface LightboxImage {
+	src: string;
+	alt: string;
 }
 
 const URI_AUTOLINK_PREFIX_REGEX = /^<[A-Za-z][A-Za-z0-9+.-]{1,31}:[^<>\u0000-\u0020]*>/;
@@ -21,7 +26,11 @@ function sanitizeMarkdownSource(source: string): string {
 
 export default function MermaidMarkdown({ source }: Props) {
 	const ref = useRef<HTMLDivElement | null>(null);
+	const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 	const safeSource = sanitizeMarkdownSource(source);
+	const [lightbox, setLightbox] = useState<LightboxImage | null>(null);
+
+	const closeLightbox = useCallback(() => setLightbox(null), []);
 
 	useEffect(() => {
 		if (!ref.current) return;
@@ -37,9 +46,70 @@ export default function MermaidMarkdown({ source }: Props) {
 		return () => cancelAnimationFrame(frameId);
 	}, [safeSource]);
 
+	// Close the lightbox on Escape and move focus to the close button when it opens.
+	useEffect(() => {
+		if (!lightbox) return;
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") {
+				event.stopPropagation();
+				closeLightbox();
+			}
+		};
+		document.addEventListener("keydown", handleKeyDown, true);
+		closeButtonRef.current?.focus();
+		return () => document.removeEventListener("keydown", handleKeyDown, true);
+	}, [lightbox, closeLightbox]);
+
+	// Override the markdown image renderer so attached images can be opened in a
+	// lightbox. Mermaid diagrams are rendered as inline SVG (not <img>), so they
+	// are unaffected.
+	const markdownComponents = {
+		img: ({ src, alt, ...rest }: React.ImgHTMLAttributes<HTMLImageElement>) => {
+			const resolvedSrc = typeof src === "string" ? src : "";
+			const resolvedAlt = alt ?? "";
+			return (
+				// biome-ignore lint/a11y/useKeyWithClickEvents: keyboard users can open the full image via the rendered link/markup; the click handler is a progressive enhancement for pointer users.
+				<img
+					{...rest}
+					src={resolvedSrc}
+					alt={resolvedAlt}
+					className="bl-markdown-img"
+					onClick={() => {
+						if (resolvedSrc) setLightbox({ src: resolvedSrc, alt: resolvedAlt });
+					}}
+				/>
+			);
+		},
+	};
+
 	return (
 		<div ref={ref} className="wmde-markdown">
-			<MDEditor.Markdown source={safeSource} />
+			<MDEditor.Markdown source={safeSource} components={markdownComponents} />
+			{lightbox && (
+				<div
+					className="bl-lightbox-overlay"
+					role="dialog"
+					aria-modal="true"
+					aria-label={lightbox.alt || "Image preview"}
+					onClick={closeLightbox}
+				>
+					<button
+						type="button"
+						ref={closeButtonRef}
+						className="bl-lightbox-close"
+						aria-label="Close image preview"
+						onClick={closeLightbox}
+					>
+						×
+					</button>
+					<img
+						className="bl-lightbox-img"
+						src={lightbox.src}
+						alt={lightbox.alt}
+						onClick={(event) => event.stopPropagation()}
+					/>
+				</div>
+			)}
 		</div>
 	);
 }
