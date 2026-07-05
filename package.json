@@ -15,12 +15,12 @@
     "backlog": "scripts/cli.cjs"
   },
   "optionalDependencies": {
-    "backlog.md-darwin-arm64": "*",
-    "backlog.md-darwin-x64": "*",
-    "backlog.md-linux-arm64": "*",
-    "backlog.md-linux-x64": "*",
-    "backlog.md-windows-arm64": "*",
-    "backlog.md-windows-x64": "*"
+    "kanteam-darwin-arm64": "*",
+    "kanteam-darwin-x64": "*",
+    "kanteam-linux-arm64": "*",
+    "kanteam-linux-x64": "*",
+    "kanteam-windows-arm64": "*",
+    "kanteam-windows-x64": "*"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.12",

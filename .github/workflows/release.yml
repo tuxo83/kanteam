@@ -105,26 +105,31 @@ jobs:
           TAG="${GITHUB_REF##refs/tags/v}"
           jq 'del(.devDependencies,.scripts.prepare,.scripts.preinstall,.type) |
               .version = "'$TAG'" |
-              .bin = {backlog:"cli.js"} |
-              .files = ["cli.js","resolveBinary.cjs","postuninstall.cjs","package.json","README.md","LICENSE"] |
+              .bin = {kanteam:"cli.js",backlog:"cli.js"} |
+              .files = ["cli.js","resolveBinary.cjs","postuninstall.cjs","package.json","README.md","LICENSE","NOTICE"] |
               .scripts = {"postuninstall": "node postuninstall.cjs"} |
-              .repository = {"type":"git","url":"https://github.com/MrLesk/Backlog.md"} |
+              .repository = {"type":"git","url":"https://github.com/tuxo83/kanteam"} |
               .optionalDependencies |= map_values("'$TAG'")' package.json > dist/package.json
-          cp LICENSE README.md dist/ 2>/dev/null || true
+          cp LICENSE README.md NOTICE dist/ 2>/dev/null || true
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - name: Configure npm for trusted publishing
+          registry-url: https://registry.npmjs.org
+      - name: Configure npm
         shell: bash
         run: |
           set -euo pipefail
           npm install -g npm@11.6.0
           npm --version
       - name: Dry run trusted publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd dist
           npm publish --access public --dry-run
       - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd dist
           npm publish --access public
@@ -135,27 +140,27 @@ jobs:
       matrix:
         include:
           - target: bun-linux-x64-baseline
-            package: backlog.md-linux-x64
+            package: kanteam-linux-x64
             os: linux
             cpu: x64
           - target: bun-linux-arm64
-            package: backlog.md-linux-arm64
+            package: kanteam-linux-arm64
             os: linux
             cpu: arm64
           - target: bun-darwin-x64
-            package: backlog.md-darwin-x64
+            package: kanteam-darwin-x64
             os: darwin
             cpu: x64
           - target: bun-darwin-arm64
-            package: backlog.md-darwin-arm64
+            package: kanteam-darwin-arm64
             os: darwin
             cpu: arm64
           - target: bun-windows-x64-baseline
-            package: backlog.md-windows-x64
+            package: kanteam-windows-x64
             os: win32
             cpu: x64
           - target: bun-windows-arm64
-            package: backlog.md-windows-arm64
+            package: kanteam-windows-arm64
             os: win32
             cpu: arm64
     runs-on: ubuntu-latest
@@ -190,7 +195,7 @@ jobs:
             "files": ["backlog${{ contains(matrix.target,'windows') && '.exe' || '' }}","package.json","LICENSE"],
             "repository": {
               "type": "git",
-              "url": "https://github.com/MrLesk/Backlog.md"
+              "url": "https://github.com/tuxo83/kanteam"
             }
           }
           EOF
@@ -202,17 +207,22 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - name: Configure npm for trusted publishing
+          registry-url: https://registry.npmjs.org
+      - name: Configure npm
         shell: bash
         run: |
           set -euo pipefail
           npm install -g npm@11.6.0
           npm --version
       - name: Dry run platform publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd pkg
           npm publish --access public --dry-run
       - name: Publish platform package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd pkg
           npm publish --access public
@@ -238,7 +248,7 @@ jobs:
           VERSION="${GITHUB_REF##refs/tags/v}"
           MAX_ATTEMPTS=40
           SLEEP_SECONDS=15
-          PACKAGE_NAME="$(node -e 'const map = { win32: "windows", darwin: "darwin", linux: "linux" }; const platform = map[process.platform]; const arch = process.arch; if (!platform || !["x64","arm64"].includes(arch)) { process.exit(1); } process.stdout.write(`backlog.md-${platform}-${arch}`);')"
+          PACKAGE_NAME="$(node -e 'const map = { win32: "windows", darwin: "darwin", linux: "linux" }; const platform = map[process.platform]; const arch = process.arch; if (!platform || !["x64","arm64"].includes(arch)) { process.exit(1); } process.stdout.write(`kanteam-${platform}-${arch}`);')"
           BINARY_PATH="node_modules/${PACKAGE_NAME}/backlog"
 
           echo "Waiting for ${PACKAGE_NAME}@${VERSION} to become installable..."
@@ -278,12 +288,12 @@ jobs:
           MAX_ATTEMPTS=40
           SLEEP_SECONDS=15
           PACKAGES=(
-            "backlog.md-linux-x64"
-            "backlog.md-linux-arm64"
-            "backlog.md-darwin-x64"
-            "backlog.md-darwin-arm64"
-            "backlog.md-windows-x64"
-            "backlog.md-windows-arm64"
+            "kanteam-linux-x64"
+            "kanteam-linux-arm64"
+            "kanteam-darwin-x64"
+            "kanteam-darwin-arm64"
+            "kanteam-windows-x64"
+            "kanteam-windows-arm64"
           )
 
           for pkg in "${PACKAGES[@]}"; do
@@ -320,7 +330,7 @@ jobs:
             throw "Unsupported runner arch: $Arch"
           }
 
-          $PackageName = "backlog.md-windows-$Arch"
+          $PackageName = "kanteam-windows-$Arch"
           $BinaryPath = Join-Path -Path "node_modules/$PackageName" -ChildPath "backlog.exe"
 
           Write-Host "Waiting for $PackageName@$Version to become installable..."
@@ -379,8 +389,8 @@ jobs:
           VERSION="${GITHUB_REF##refs/tags/v}"
           MAX_ATTEMPTS=40
           SLEEP_SECONDS=15
-          EXPECTED_PACKAGE="$(node -e 'const map = { win32: "windows", darwin: "darwin", linux: "linux" }; const platform = map[process.platform]; const arch = process.arch; if (!platform || !["x64","arm64"].includes(arch)) { process.exit(1); } process.stdout.write(`backlog.md-${platform}-${arch}`);')"
-          echo "Waiting for backlog.md@${VERSION} install + ${EXPECTED_PACKAGE} optional dependency..."
+          EXPECTED_PACKAGE="$(node -e 'const map = { win32: "windows", darwin: "darwin", linux: "linux" }; const platform = map[process.platform]; const arch = process.arch; if (!platform || !["x64","arm64"].includes(arch)) { process.exit(1); } process.stdout.write(`kanteam-${platform}-${arch}`);')"
+          echo "Waiting for kanteam@${VERSION} install + ${EXPECTED_PACKAGE} optional dependency..."
 
           for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
             rm -rf sanity
@@ -388,7 +398,7 @@ jobs:
             cd sanity
             npm init -y >/dev/null 2>&1
 
-            if npm i "backlog.md@${VERSION}" --prefer-online --no-audit --no-fund; then
+            if npm i "kanteam@${VERSION}" --prefer-online --no-audit --no-fund; then
               if npx backlog -v; then
                 echo "Install sanity succeeded on attempt ${attempt}/${MAX_ATTEMPTS}."
                 exit 0
@@ -410,7 +420,7 @@ jobs:
             fi
           done
 
-          echo "Install sanity timed out for backlog.md@${VERSION}."
+          echo "Install sanity timed out for kanteam@${VERSION}."
           exit 1
       - name: Install and run backlog -v (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
@@ -425,8 +435,8 @@ jobs:
             throw "Unsupported runner arch: $Arch"
           }
 
-          $ExpectedPackage = "backlog.md-windows-$Arch"
-          Write-Host "Waiting for backlog.md@$Version install + $ExpectedPackage optional dependency..."
+          $ExpectedPackage = "kanteam-windows-$Arch"
+          Write-Host "Waiting for kanteam@$Version install + $ExpectedPackage optional dependency..."
 
           for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
             if (Test-Path "sanity") {
@@ -437,7 +447,7 @@ jobs:
 
             try {
               npm init -y | Out-Null
-              npm i "backlog.md@$Version" --prefer-online --no-audit --no-fund
+              npm i "kanteam@$Version" --prefer-online --no-audit --no-fund
               if ($LASTEXITCODE -eq 0) {
                 npx backlog -v
                 if ($LASTEXITCODE -eq 0) {
@@ -463,7 +473,7 @@ jobs:
             }
           }
 
-          throw "Install sanity timed out for backlog.md@$Version."
+          throw "Install sanity timed out for kanteam@$Version."
 
   github-release:
     needs: build
