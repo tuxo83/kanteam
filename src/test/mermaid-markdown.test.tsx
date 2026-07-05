@@ -36,6 +36,38 @@ describe("MermaidMarkdown", () => {
 		expect(html).toContain('href="mailto:foo@example.com"');
 	});
 
+	it("renders inline LaTeX math with KaTeX", () => {
+		const source = "Speedup is $S = \\frac{1}{(1-p) + p/n}$ per Amdahl's law.";
+		const html = renderToString(<MermaidMarkdown source={source} />);
+
+		expect(html).toContain('class="katex"');
+		// The raw LaTeX delimiters must not survive in the output.
+		expect(html).not.toContain("$S =");
+	});
+
+	it("renders a single-line $$…$$ formula as a KaTeX display block", () => {
+		const source = "$$S_{max} = \\frac{1}{1-p}$$";
+		const html = renderToString(<MermaidMarkdown source={source} />);
+
+		expect(html).toContain("katex-display");
+	});
+
+	it("renders a multi-line $$ block as a KaTeX display block", () => {
+		const source = "Before\n\n$$\nS = \\frac{1}{1-p}\n$$\n\nAfter";
+		const html = renderToString(<MermaidMarkdown source={source} />);
+
+		expect(html).toContain("katex-display");
+	});
+
+	it("does not treat $ inside inline code as math", () => {
+		const source = "Use `$HOME` and `$notmath$` verbatim.";
+		const html = renderToString(<MermaidMarkdown source={source} />);
+
+		expect(html).toContain("<code>$HOME</code>");
+		expect(html).toContain("<code>$notmath$</code>");
+		expect(html).not.toContain('class="katex"');
+	});
+
 	it("keeps hash-only markdown links on the current route when a base href is present", () => {
 		const dom = new JSDOM("<!doctype html><html><head><base href='/'></head><body></body></html>", {
 			url: "http://localhost/tasks/BACK-426?view=detail",
