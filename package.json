@@ -1,6 +1,6 @@
 {
   "name": "kanteam",
-  "version": "1.47.3",
+  "version": "1.47.4",
   "description": "Kanteam — a multi-user, self-hostable Markdown-native Kanban & backlog manager. A friendly fork of Backlog.md (MIT), drop-in compatible, adding remote auto-sync, per-user commit attribution and web-viewer improvements.",
   "type": "module",
   "module": "src/cli.ts",
