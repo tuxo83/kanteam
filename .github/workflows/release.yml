@@ -104,6 +104,7 @@ jobs:
         run: |
           TAG="${GITHUB_REF##refs/tags/v}"
           jq 'del(.devDependencies,.scripts.prepare,.scripts.preinstall,.type) |
+              .name = "@tuxo83/kanteam" |
               .version = "'$TAG'" |
               .bin = {kanteam:"cli.js",backlog:"cli.js"} |
               .files = ["cli.js","resolveBinary.cjs","postuninstall.cjs","package.json","README.md","LICENSE","NOTICE"] |
@@ -390,7 +391,7 @@ jobs:
           MAX_ATTEMPTS=40
           SLEEP_SECONDS=15
           EXPECTED_PACKAGE="$(node -e 'const map = { win32: "windows", darwin: "darwin", linux: "linux" }; const platform = map[process.platform]; const arch = process.arch; if (!platform || !["x64","arm64"].includes(arch)) { process.exit(1); } process.stdout.write(`kanteam-${platform}-${arch}`);')"
-          echo "Waiting for kanteam@${VERSION} install + ${EXPECTED_PACKAGE} optional dependency..."
+          echo "Waiting for @tuxo83/kanteam@${VERSION} install + ${EXPECTED_PACKAGE} optional dependency..."
 
           for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
             rm -rf sanity
@@ -398,7 +399,7 @@ jobs:
             cd sanity
             npm init -y >/dev/null 2>&1
 
-            if npm i "kanteam@${VERSION}" --prefer-online --no-audit --no-fund; then
+            if npm i "@tuxo83/kanteam@${VERSION}" --prefer-online --no-audit --no-fund; then
               if npx backlog -v; then
                 echo "Install sanity succeeded on attempt ${attempt}/${MAX_ATTEMPTS}."
                 exit 0
@@ -420,7 +421,7 @@ jobs:
             fi
           done
 
-          echo "Install sanity timed out for kanteam@${VERSION}."
+          echo "Install sanity timed out for @tuxo83/kanteam@${VERSION}."
           exit 1
       - name: Install and run backlog -v (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
@@ -436,7 +437,7 @@ jobs:
           }
 
           $ExpectedPackage = "kanteam-windows-$Arch"
-          Write-Host "Waiting for kanteam@$Version install + $ExpectedPackage optional dependency..."
+          Write-Host "Waiting for @tuxo83/kanteam@$Version install + $ExpectedPackage optional dependency..."
 
           for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
             if (Test-Path "sanity") {
@@ -447,7 +448,7 @@ jobs:
 
             try {
               npm init -y | Out-Null
-              npm i "kanteam@$Version" --prefer-online --no-audit --no-fund
+              npm i "@tuxo83/kanteam@$Version" --prefer-online --no-audit --no-fund
               if ($LASTEXITCODE -eq 0) {
                 npx backlog -v
                 if ($LASTEXITCODE -eq 0) {
@@ -473,7 +474,7 @@ jobs:
             }
           }
 
-          throw "Install sanity timed out for kanteam@$Version."
+          throw "Install sanity timed out for @tuxo83/kanteam@$Version."
 
   github-release:
     needs: build

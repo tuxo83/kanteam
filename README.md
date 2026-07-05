@@ -2,7 +2,7 @@
 <p align="center">Markdown‑native multi-user, self-hostable Kanban &amp; backlog manager for any Git repository</p>
 
 <p align="center">
-<code>npm i -g kanteam</code> or <code>bun add -g kanteam</code>
+<code>npm i -g @tuxo83/kanteam</code> or <code>bun add -g @tuxo83/kanteam</code> — command: <code>kanteam</code>
 </p>
 
 ![Kanteam demo GIF using: backlog board](./.github/backlog-v1.40.gif)
@@ -61,9 +61,9 @@ Home: [kanteam.com](https://kanteam.com) · Everything below documents the share
 ## <img src="./.github/5-minute-tour-256.png" alt="Getting started" width="28" height="28" align="center"> Getting started
 
 ```bash
-# Install
-bun i -g kanteam
-# or: npm i -g kanteam
+# Install (published as the scoped package @tuxo83/kanteam; the command stays `kanteam`)
+bun i -g @tuxo83/kanteam
+# or: npm i -g @tuxo83/kanteam
 
 # Initialize in any Git repo
 backlog init "My Awesome Project"
