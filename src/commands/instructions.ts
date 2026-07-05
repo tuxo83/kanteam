@@ -30,7 +30,7 @@ function commandLine(command: string, description: string): string {
 
 export function formatInstructionGuideIndex(): string {
 	const lines: string[] = [
-		"Backlog.md instructions",
+		"Kanteam instructions",
 		"",
 		"Start here:",
 		commandLine("backlog instructions overview", "Required first read before answering any user request"),

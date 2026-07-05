@@ -11,8 +11,7 @@
     "NOTICE"
   ],
   "bin": {
-    "kanteam": "scripts/cli.cjs",
-    "backlog": "scripts/cli.cjs"
+    "kanteam": "scripts/cli.cjs"
   },
   "optionalDependencies": {
     "kanteam-darwin-arm64": "*",

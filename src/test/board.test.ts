@@ -24,7 +24,7 @@ describe("exportKanbanBoardToFile", () => {
 		await exportKanbanBoardToFile(tasks, ["To Do"], file, "TestProject");
 		const initial = await Bun.file(file).text();
 		expect(initial).toContain("TASK-1");
-		expect(initial).toContain("# Kanban Board Export (powered by Backlog.md)");
+		expect(initial).toContain("# Kanban Board Export (powered by Kanteam)");
 		expect(initial).toContain("Project: TestProject");
 
 		await exportKanbanBoardToFile(tasks, ["To Do"], file, "TestProject");

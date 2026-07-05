@@ -37,12 +37,12 @@ function sectionTitle(value: string, color: boolean): string {
 
 export function formatRootEntry({ version, initialized, color = false }: RootEntryOptions): string {
 	const logoLines = LOGO_LINES.map((line) => colorize(line, ANSI.logo, color));
-	const lines: string[] = [...logoLines, "", `${colorize("Backlog.md", ANSI.title, color)} v${version}`, ""];
+	const lines: string[] = [...logoLines, "", `${colorize("Kanteam", ANSI.title, color)} v${version}`, ""];
 
 	if (!initialized) {
-		lines.push("This directory is not initialized for Backlog.md.", "");
+		lines.push("This directory is not initialized for Kanteam.", "");
 		lines.push(sectionTitle("Project setup:", color));
-		lines.push(commandLine("backlog init", "Initialize Backlog.md interactively"));
+		lines.push(commandLine("backlog init", "Initialize Kanteam interactively"));
 		lines.push(commandLine("backlog init --defaults", "Initialize with default settings"));
 		lines.push(commandLine("backlog init --no-git", "Initialize without Git integration"));
 		lines.push("");
@@ -67,7 +67,7 @@ export function formatRootEntry({ version, initialized, color = false }: RootEnt
 	lines.push(sectionTitle("Command help:", color));
 	lines.push(commandLine("backlog <command> --help", "Show options, fields, and examples"));
 	lines.push("");
-	lines.push("Docs: https://backlog.md");
+	lines.push("Docs: https://kanteam.com");
 	lines.push("");
 
 	return `${lines.join("\n")}\n`;

@@ -39,7 +39,7 @@ describe("CLI Integration", () => {
 			const output = result.stdout.toString() + result.stderr.toString();
 
 			expect(result.exitCode).toBe(0);
-			expect(output).toContain("Backlog.md v");
+			expect(output).toContain("Kanteam v");
 			expect(output).toContain("Local instructions:");
 			expect(output).toContain("backlog instructions overview");
 			expect(output).not.toContain("unknown option '--plain'");
@@ -52,7 +52,7 @@ describe("CLI Integration", () => {
 		it("prints the guide index by default", async () => {
 			const output = await $`bun ${CLI_PATH} instructions`.cwd(TEST_DIR).text();
 
-			expect(output).toContain("Backlog.md instructions");
+			expect(output).toContain("Kanteam instructions");
 			expect(output).toContain("Start here:");
 			expect(output).toMatch(/'backlog instructions overview'\s+Required first read before answering any user request/);
 			expect(output).not.toMatch(/^\s+'backlog instructions'\s+List workflow guides/m);
@@ -2438,7 +2438,7 @@ describe("CLI Integration", () => {
 			expect(content).toContain("To Do");
 			expect(content).toContain("TASK-1");
 			expect(content).toContain("Export Test Task");
-			expect(content).toContain("# Kanban Board Export (powered by Backlog.md)");
+			expect(content).toContain("# Kanban Board Export (powered by Kanteam)");
 			expect(content).toContain("Project: TestProject");
 
 			// Test overwrite behavior

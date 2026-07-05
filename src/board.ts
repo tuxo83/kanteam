@@ -72,7 +72,7 @@ export function generateKanbanBoardWithMetadata(tasks: Task[], statuses: string[
 	const { orderedStatuses, groupedTasks } = buildKanbanStatusGroups(tasks, statuses);
 
 	// Create header
-	const header = `# Kanban Board Export (powered by Backlog.md)
+	const header = `# Kanban Board Export (powered by Kanteam)
 Generated on: ${timestamp}
 Project: ${projectName}
 
@@ -258,7 +258,7 @@ export function generateMilestoneGroupedBoard(
 		}
 	}
 
-	const header = `# Kanban Board by Milestone (powered by Backlog.md)
+	const header = `# Kanban Board by Milestone (powered by Kanteam)
 Generated on: ${timestamp}
 Project: ${projectName}
 

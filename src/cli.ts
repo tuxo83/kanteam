@@ -982,7 +982,7 @@ addHelpSchema(program.command("init [projectName]"), {
 							integrationTipShown = true;
 						}
 						const integrationPrompt = await clack.select({
-							message: "How would you like your AI tools to connect to Backlog.md?",
+							message: "How would you like your AI tools to connect to Kanteam?",
 							initialValue: "cli",
 							options: [
 								{
@@ -1388,7 +1388,7 @@ addHelpSchema(program.command("init [projectName]"), {
 
 				// Log Claude agent result from shared init
 				if (integrationMode === "cli" && initResult.mcpResults?.claudeAgent) {
-					clack.log.info(`Claude Code Backlog.md agent ${initResult.mcpResults.claudeAgent}`);
+					clack.log.info(`Claude Code Kanteam agent ${initResult.mcpResults.claudeAgent}`);
 				}
 
 				// Final warning if remote operations were enabled but no git remotes are configured
@@ -3876,7 +3876,7 @@ const configCmd = addHelpSchema(program.command("config"), {
 			}
 			if (shouldInstallClaude) {
 				await installClaudeAgent(cwd);
-				console.log("✓ Claude Code Backlog.md agent installed to .claude/agents/");
+				console.log("✓ Claude Code Kanteam agent installed to .claude/agents/");
 			}
 			if (completionResult) {
 				const instructions = completionResult.instructions.trim();

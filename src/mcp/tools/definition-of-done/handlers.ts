@@ -26,7 +26,7 @@ export class DefinitionOfDoneHandlers {
 	private async loadConfigOrThrow() {
 		const config = await this.core.filesystem.loadConfig();
 		if (!config) {
-			throw new BacklogToolError("Backlog config not found. Initialize Backlog.md first.", "NOT_FOUND");
+			throw new BacklogToolError("Backlog config not found. Initialize Kanteam first.", "NOT_FOUND");
 		}
 		return config;
 	}

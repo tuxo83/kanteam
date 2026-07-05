@@ -284,7 +284,7 @@ export async function viewTaskEnhanced(
 	let selectionRequestId = 0;
 	let noResultsMessage: string | null = null;
 
-	const screen = createScreen({ title: options.title || "Backlog Tasks" });
+	const screen = createScreen({ title: options.title || "Kanteam Tasks" });
 
 	// Main container
 	const container = box({
@@ -931,7 +931,7 @@ export async function viewTaskEnhanced(
 		};
 
 		if (noResultsMessage) {
-			screen.title = options.title || "Backlog Tasks";
+			screen.title = options.title || "Kanteam Tasks";
 
 			headerDetailBox = box({
 				parent: detailPane,

@@ -106,7 +106,7 @@ jobs:
           jq 'del(.devDependencies,.scripts.prepare,.scripts.preinstall,.type) |
               .name = "@tuxo83/kanteam" |
               .version = "'$TAG'" |
-              .bin = {kanteam:"cli.js",backlog:"cli.js"} |
+              .bin = {kanteam:"cli.js"} |
               .files = ["cli.js","resolveBinary.cjs","postuninstall.cjs","package.json","README.md","LICENSE","NOTICE"] |
               .scripts = {"postuninstall": "node postuninstall.cjs"} |
               .repository = {"type":"git","url":"https://github.com/tuxo83/kanteam"} |
