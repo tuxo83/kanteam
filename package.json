@@ -1,14 +1,17 @@
 {
-  "name": "backlog.md",
+  "name": "kanteam",
   "version": "1.47.1",
+  "description": "Kanteam — a multi-user, self-hostable Markdown-native Kanban & backlog manager. A friendly fork of Backlog.md (MIT), drop-in compatible, adding remote auto-sync, per-user commit attribution and web-viewer improvements.",
   "type": "module",
   "module": "src/cli.ts",
   "files": [
     "scripts/*.cjs",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "bin": {
+    "kanteam": "scripts/cli.cjs",
     "backlog": "scripts/cli.cjs"
   },
   "optionalDependencies": {
@@ -74,15 +77,15 @@
       "biome check --write --files-ignore-unknown=true"
     ]
   },
-  "author": "Alex Gavrilescu (https://github.com/MrLesk)",
+  "author": "tuxo83 (https://github.com/tuxo83)",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MrLesk/Backlog.md.git"
+    "url": "git+https://github.com/tuxo83/kanteam.git"
   },
   "bugs": {
-    "url": "https://github.com/MrLesk/Backlog.md/issues"
+    "url": "https://github.com/tuxo83/kanteam/issues"
   },
-  "homepage": "https://backlog.md",
+  "homepage": "https://kanteam.com",
   "keywords": [
     "cli",
     "markdown",
@@ -90,6 +93,11 @@
     "task",
     "project-management",
     "backlog",
+    "backlog.md",
+    "fork",
+    "self-hosted",
+    "multi-user",
+    "collaboration",
     "agents"
   ],
   "license": "MIT",

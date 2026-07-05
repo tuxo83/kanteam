@@ -1,11 +1,29 @@
-<h1 align="center">Backlog.md</h1>
-<p align="center">Markdown‑native Task Manager &amp; Kanban visualizer for any Git repository</p>
+<h1 align="center">Kanteam</h1>
+<p align="center">Markdown‑native multi-user, self-hostable Kanban &amp; backlog manager for any Git repository</p>
 
 <p align="center">
-<code>npm i -g backlog.md</code> or <code>bun add -g backlog.md</code> or <code>brew install backlog-md</code> or <code>nix run github:MrLesk/Backlog.md</code>
+<code>npm i -g kanteam</code> or <code>bun add -g kanteam</code>
 </p>
 
-![Backlog demo GIF using: backlog board](./.github/backlog-v1.40.gif)
+![Kanteam demo GIF using: backlog board](./.github/backlog-v1.40.gif)
+
+---
+
+> **Kanteam is a friendly fork of [Backlog.md](https://backlog.md) by [Alex Gavrilescu (MrLesk)](https://github.com/MrLesk), released under the MIT License.**
+> It stays **drop-in compatible** with existing Backlog.md projects — same `backlog/` data directory, same `config.yml`, and the `backlog` command still works — and adds features aimed at **teams self-hosting a shared instance**. All credit for the original tool goes upstream; see [NOTICE](NOTICE). Kanteam is an independent fork, not affiliated with or endorsed by the Backlog.md project.
+
+### What Kanteam adds on top of Backlog.md
+
+| Addition | What it does |
+| --- | --- |
+| 🔄 **Remote auto-sync** | optional `autoPull` before each operation and `autoPush` after each commit (CLI, web, MCP) |
+| 👥 **Per-user commit attribution** | web/MCP commits attributed to the authenticated user (e.g. behind an oauth2-proxy) for real multi-user hosting |
+| 🌐 **Streamable HTTP MCP transport** | run the MCP server over HTTP with per-request commit attribution |
+| 📎 **Attachment serving** | task attachments served over `/attachments` so images actually load in the web viewer |
+| 🖼️ **Image lightbox** | click-to-zoom on Markdown images |
+| ↩️ **Hard line breaks** | single newlines render as line breaks in the web viewer |
+
+Home: [kanteam.com](https://kanteam.com) · Everything below documents the shared Backlog.md core.
 
 
 ---
@@ -44,9 +62,8 @@
 
 ```bash
 # Install
-bun i -g backlog.md
-# or: npm i -g backlog.md
-# or: brew install backlog-md
+bun i -g kanteam
+# or: npm i -g kanteam
 
 # Initialize in any Git repo
 backlog init "My Awesome Project"
@@ -315,4 +332,4 @@ For the full configuration reference (all options, commands, and detailed notes)
 
 ### License
 
-Backlog.md is released under the **MIT License** – do anything, just give credit. See [LICENSE](LICENSE).
+Kanteam, like its upstream **Backlog.md** (© Alex Gavrilescu / MrLesk), is released under the **MIT License** – do anything, just give credit. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
