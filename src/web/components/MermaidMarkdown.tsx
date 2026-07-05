@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import MDEditor from "@uiw/react-md-editor";
+import { rehypeMathPlugins, remarkMathPlugins } from "../lib/markdown-math";
 import { renderMermaidIn } from "../utils/mermaid";
+// KaTeX stylesheet is bundled (fonts are inlined as data URIs at build time) so math
+// renders fully offline, without any CDN request.
+import "katex/dist/katex.min.css";
 
 interface Props {
 	source: string;
@@ -109,7 +113,12 @@ export default function MermaidMarkdown({ source }: Props) {
 
 	return (
 		<div ref={ref} className="wmde-markdown">
-			<MDEditor.Markdown source={safeSource} components={markdownComponents} remarkPlugins={[remarkHardBreaks]} />
+			<MDEditor.Markdown
+				source={safeSource}
+				components={markdownComponents}
+				remarkPlugins={[remarkHardBreaks, ...remarkMathPlugins]}
+				rehypePlugins={rehypeMathPlugins}
+			/>
 			{lightbox && (
 				<div
 					className="bl-lightbox-overlay"
