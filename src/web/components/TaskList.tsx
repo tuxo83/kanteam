@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { apiClient } from "../lib/api";
 import type {
@@ -109,9 +109,6 @@ const TaskList: React.FC<TaskListProps> = ({
 	const [cleanupSuccessMessage, setCleanupSuccessMessage] = useState<string | null>(null);
 	const [sortColumn, setSortColumn] = useState<TaskSortColumn>("id");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-	const tableHeaderScrollRef = useRef<HTMLDivElement | null>(null);
-	const tableBodyScrollRef = useRef<HTMLDivElement | null>(null);
-	const isSyncingTableScrollRef = useRef(false);
 	const isFilteringTerminalStatus = isTerminalStatus(statusFilter, availableStatuses);
 	const milestoneAliasToCanonical = useMemo(() => {
 		const aliasMap = new Map<string, string>();
@@ -570,33 +567,9 @@ const TaskList: React.FC<TaskListProps> = ({
 
 	const currentCount = sortedDisplayTasks.length;
 
-	useEffect(() => {
-		const headerEl = tableHeaderScrollRef.current;
-		const bodyEl = tableBodyScrollRef.current;
-		if (!headerEl || !bodyEl) return;
-
-		const syncScrollLeft = (source: HTMLDivElement, target: HTMLDivElement) => {
-			if (isSyncingTableScrollRef.current) return;
-			isSyncingTableScrollRef.current = true;
-			target.scrollLeft = source.scrollLeft;
-			isSyncingTableScrollRef.current = false;
-		};
-
-		const handleHeaderScroll = () => syncScrollLeft(headerEl, bodyEl);
-		const handleBodyScroll = () => syncScrollLeft(bodyEl, headerEl);
-
-		headerEl.addEventListener("scroll", handleHeaderScroll, { passive: true });
-		bodyEl.addEventListener("scroll", handleBodyScroll, { passive: true });
-		headerEl.scrollLeft = bodyEl.scrollLeft;
-
-		return () => {
-			headerEl.removeEventListener("scroll", handleHeaderScroll);
-			bodyEl.removeEventListener("scroll", handleBodyScroll);
-		};
-	}, [currentCount]);
 
 	return (
-		<div className="container mx-auto px-4 py-8 transition-colors duration-200">
+		<div className="container mx-auto px-4 py-8 h-full flex flex-col transition-colors duration-200">
 			<div className="flex flex-col gap-4 mb-6">
 				<div className="flex items-center justify-between gap-3">
 						<h1 className="text-2xl font-bold text-gray-900 dark:text-white">All Tasks</h1>
@@ -713,29 +686,23 @@ const TaskList: React.FC<TaskListProps> = ({
 					</p>
 				</div>
 			) : (
-				<div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-					<div className="sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/95 backdrop-blur supports-[backdrop-filter]:bg-gray-50/90 supports-[backdrop-filter]:dark:bg-gray-700/85">
-						<div ref={tableHeaderScrollRef} className="overflow-x-auto" style={{ overflowY: "hidden" }}>
-							<table className="w-full min-w-[1100px] table-fixed border-collapse">
-								{renderColumnGroup()}
-								<thead>
-									<tr className="text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-										{renderSortableHeader("ID", "id")}
-										{renderSortableHeader("Title", "title")}
-										{renderSortableHeader("Status", "status")}
-										{renderSortableHeader("Priority", "priority")}
-										<th className="px-3 py-2">Labels</th>
-										<th className="px-3 py-2">Assignee</th>
-										{renderSortableHeader("Milestone", "milestone")}
-										{renderSortableHeader("Created", "created")}
-									</tr>
-								</thead>
-							</table>
-						</div>
-					</div>
-					<div ref={tableBodyScrollRef} className="overflow-x-auto" style={{ overflowY: "hidden" }}>
+				// One table in its own scroll box: the header sticks to its top, the horizontal
+				// scrollbar sits at its bottom, and the page itself no longer scrolls
+				<div className="flex-1 min-h-0 rounded-lg border border-gray-200 dark:border-gray-700 overflow-auto">
 						<table className="w-full min-w-[1100px] table-fixed border-collapse">
 							{renderColumnGroup()}
+							<thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-700 shadow-[0_1px_0_0_rgb(229,231,235)] dark:shadow-[0_1px_0_0_rgb(55,65,81)]">
+								<tr className="text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+									{renderSortableHeader("ID", "id")}
+									{renderSortableHeader("Title", "title")}
+									{renderSortableHeader("Status", "status")}
+									{renderSortableHeader("Priority", "priority")}
+									<th className="px-3 py-2">Labels</th>
+									<th className="px-3 py-2">Assignee</th>
+									{renderSortableHeader("Milestone", "milestone")}
+									{renderSortableHeader("Created", "created")}
+								</tr>
+							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 								{sortedDisplayTasks.map((task) => {
 									const isFromOtherBranch = Boolean(task.branch);
@@ -848,7 +815,6 @@ const TaskList: React.FC<TaskListProps> = ({
 								})}
 							</tbody>
 						</table>
-					</div>
 				</div>
 			)}
 

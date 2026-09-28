@@ -159,7 +159,7 @@ describe("TaskList labels filter menu", () => {
 		await clickElement(labelsButton);
 
 		const labelsMenu = container.querySelector("#task-list-labels-menu");
-		const stickyHeader = container.querySelector("div.sticky");
+		const stickyHeader = container.querySelector("thead.sticky");
 
 		expect(labelsMenu).toBeTruthy();
 		expect(stickyHeader).toBeTruthy();
