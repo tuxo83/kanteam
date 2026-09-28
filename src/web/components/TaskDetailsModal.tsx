@@ -23,6 +23,8 @@ interface Props {
   milestoneEntities?: Milestone[];
   archivedMilestoneEntities?: Milestone[];
   definitionOfDoneDefaults?: string[];
+  labelSuggestions?: string[]; // existing labels offered in the Labels field
+  assigneeSuggestions?: string[]; // existing assignees offered in the Assignee field
 }
 
 type Mode = "preview" | "edit" | "create";
@@ -65,6 +67,8 @@ export const TaskDetailsModal: React.FC<Props> = ({
   archivedMilestoneEntities,
   isDraftMode,
   definitionOfDoneDefaults,
+  labelSuggestions,
+  assigneeSuggestions,
 }) => {
   const { theme } = useTheme();
   const isCreateMode = !task;
@@ -1109,7 +1113,8 @@ export const TaskDetailsModal: React.FC<Props> = ({
               label=""
               value={assignee}
               onChange={(value) => handleInlineMetaUpdate({ assignee: value })}
-              placeholder="Type name and press Enter"
+              suggestions={assigneeSuggestions}
+              placeholder="Choose or type a name"
               disabled={isFromOtherBranch}
             />
           </div>
@@ -1122,7 +1127,8 @@ export const TaskDetailsModal: React.FC<Props> = ({
               label=""
               value={labels}
               onChange={(value) => handleInlineMetaUpdate({ labels: value })}
-              placeholder="Type label and press Enter or comma"
+              suggestions={labelSuggestions}
+              placeholder="Choose or type a label"
               disabled={isFromOtherBranch}
             />
           </div>

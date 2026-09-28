@@ -3,6 +3,7 @@ import { type Milestone, type Task } from '../../types';
 import { apiClient, type ReorderTaskPayload } from '../lib/api';
 import { buildLanes, DEFAULT_LANE_KEY, groupTasksByLaneAndStatus, type LaneMode } from '../lib/lanes';
 import { collectAvailableLabels, labelsToLower } from '../../utils/label-filter';
+import { collectAvailableAssignees } from '../../utils/assignee';
 import { collectArchivedMilestoneKeys, milestoneKey } from '../utils/milestones';
 import { getTerminalStatus } from '../../utils/terminal-status';
 import TaskColumn from './TaskColumn';
@@ -212,15 +213,7 @@ const Board: React.FC<BoardProps> = ({
   const canonicalMilestoneFilter = canonicalizeMilestone(milestoneFilter);
 
   // Collect unique assignees and labels from all tasks for filter dropdowns
-  const uniqueAssignees = useMemo(() => {
-    const seen = new Set<string>();
-    for (const task of tasks) {
-      for (const a of task.assignee) {
-        if (a.trim()) seen.add(a.trim());
-      }
-    }
-    return Array.from(seen).sort((a, b) => a.localeCompare(b));
-  }, [tasks]);
+  const uniqueAssignees = useMemo(() => collectAvailableAssignees(tasks), [tasks]);
 
   const uniqueLabels = useMemo(
     () => collectAvailableLabels(tasks, availableLabels),
