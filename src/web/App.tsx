@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import BoardPage from './components/BoardPage';
@@ -28,6 +28,8 @@ import { apiClient } from './lib/api';
 import { useHealthCheckContext } from './contexts/HealthCheckContext';
 import { getWebVersion } from './utils/version';
 import { collectArchivedMilestoneKeys, collectMilestoneIds, milestoneKey } from './utils/milestones';
+import { collectAvailableLabels } from '../utils/label-filter';
+import { collectAvailableAssignees } from '../utils/assignee';
 
 const buildMilestoneAliasMap = (milestones: Milestone[], archivedMilestones: Milestone[]): Map<string, string> => {
   const aliasMap = new Map<string, string>();
@@ -179,6 +181,9 @@ function App() {
   
   // Centralized data state
   const [tasks, setTasks] = useState<Task[]>([]);
+  // existing values offered as suggestions in the task form
+  const labelSuggestions = useMemo(() => collectAvailableLabels(tasks, availableLabels), [tasks, availableLabels]);
+  const assigneeSuggestions = useMemo(() => collectAvailableAssignees(tasks), [tasks]);
   const [docs, setDocs] = useState<Document[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -559,6 +564,8 @@ function App() {
           archivedMilestoneEntities={archivedMilestones}
           isDraftMode={isDraftMode}
           definitionOfDoneDefaults={config?.definitionOfDone ?? []}
+          labelSuggestions={labelSuggestions}
+          assigneeSuggestions={assigneeSuggestions}
         />
 
         {/* Task Creation Confirmation Toast */}

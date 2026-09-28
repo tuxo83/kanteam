@@ -170,7 +170,7 @@ const TaskColumn: React.FC<TaskColumnProps> = ({
 
   return (
     <div
-      className={`rounded-lg p-4 transition-colors duration-200 h-full ${
+      className={`rounded-lg p-4 transition-colors duration-200 h-full flex flex-col ${
         isEmpty ? 'min-h-24' : 'min-h-96'
       } ${
         isDragOver && (dragSourceStatus !== title || (dragSourceLane ?? null) !== (laneId ?? null))
@@ -232,7 +232,7 @@ const TaskColumn: React.FC<TaskColumnProps> = ({
         )}
       </div>
       
-      <div className="space-y-3">
+      <div className="space-y-3 flex-1 min-h-0 overflow-y-auto">
         {tasks.map((task, index) => (
           <div 
             key={task.id} 

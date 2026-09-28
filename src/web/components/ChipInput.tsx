@@ -1,4 +1,4 @@
-import React, { useState, type KeyboardEvent } from 'react';
+import React, { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 interface ChipInputProps {
   value: string[];
@@ -7,21 +7,62 @@ interface ChipInputProps {
   label: string;
   name: string;
   disabled?: boolean;
+  /** Existing values offered in a dropdown; typing a new value still works. */
+  suggestions?: string[];
 }
 
-const ChipInput: React.FC<ChipInputProps> = ({ value, onChange, placeholder, label, name, disabled }) => {
+const ChipInput: React.FC<ChipInputProps> = ({ value, onChange, placeholder, label, name, disabled, suggestions }) => {
   const [inputValue, setInputValue] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
+  const rootRef = useRef<HTMLDivElement>(null);
   const inputId = `chip-input-${name}`;
+  const listId = `${inputId}-suggestions`;
+
+  const options = useMemo(() => {
+    if (!suggestions || suggestions.length === 0) return [];
+    const chosen = new Set(value.map((item) => item.toLowerCase()));
+    const query = inputValue.trim().toLowerCase();
+    return suggestions.filter(
+      (item) => !chosen.has(item.toLowerCase()) && (!query || item.toLowerCase().includes(query)),
+    );
+  }, [suggestions, value, inputValue]);
+  const showList = isOpen && !disabled && options.length > 0;
+
+  // a click anywhere else closes the list, even when no blur event reaches the input
+  useEffect(() => {
+    if (!isOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [isOpen]);
+
+  const addChip = (raw: string) => {
+    const newValue = raw.trim();
+    if (newValue && !value.includes(newValue)) {
+      onChange([...value, newValue]);
+    }
+    setInputValue('');
+    setHighlighted(-1);
+  };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (disabled) return;
-    if ((e.key === 'Enter' || e.key === ',') && inputValue.trim()) {
+    if (showList && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       e.preventDefault();
-      const newValue = inputValue.trim();
-      if (!value.includes(newValue)) {
-        onChange([...value, newValue]);
-      }
-      setInputValue('');
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      setHighlighted((current) => (current + step + options.length) % options.length);
+    } else if (e.key === 'Enter' && showList && highlighted >= 0 && highlighted < options.length) {
+      e.preventDefault();
+      addChip(options[highlighted]!);
+    } else if ((e.key === 'Enter' || e.key === ',') && inputValue.trim()) {
+      e.preventDefault();
+      addChip(inputValue);
+    } else if (e.key === 'Escape' && showList) {
+      e.preventDefault();
+      setIsOpen(false);
     } else if (e.key === 'Backspace' && !inputValue && value.length > 0) {
       // Remove last chip when backspace is pressed on empty input
       onChange(value.slice(0, -1));
@@ -31,15 +72,11 @@ const ChipInput: React.FC<ChipInputProps> = ({ value, onChange, placeholder, lab
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
     const newValue = e.target.value;
+    setIsOpen(true);
+    setHighlighted(-1);
     // Check if user typed a comma
     if (newValue.endsWith(',')) {
-      const chipValue = newValue.slice(0, -1).trim();
-      if (chipValue && !value.includes(chipValue)) {
-        onChange([...value, chipValue]);
-        setInputValue('');
-      } else {
-        setInputValue('');
-      }
+      addChip(newValue.slice(0, -1));
     } else {
       setInputValue(newValue);
     }
@@ -51,7 +88,7 @@ const ChipInput: React.FC<ChipInputProps> = ({ value, onChange, placeholder, lab
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full" ref={rootRef}>
       <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-200">
         {label}
       </label>
@@ -87,11 +124,46 @@ const ChipInput: React.FC<ChipInputProps> = ({ value, onChange, placeholder, lab
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onFocus={() => setIsOpen(true)}
+            onClick={() => setIsOpen(true)}
+            onBlur={() => setIsOpen(false)}
             placeholder={value.length === 0 ? placeholder : ''}
             className="flex-1 min-w-[2ch] outline-none text-sm bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             disabled={disabled}
+            role={suggestions ? 'combobox' : undefined}
+            aria-expanded={suggestions ? showList : undefined}
+            aria-controls={suggestions ? listId : undefined}
+            aria-autocomplete={suggestions ? 'list' : undefined}
           />
         </div>
+        {showList && (
+          <ul
+            id={listId}
+            role="listbox"
+            className="absolute left-0 right-0 top-full mt-1 z-50 max-h-56 overflow-y-auto rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1"
+          >
+            {options.map((item, index) => (
+              <li
+                key={item}
+                role="option"
+                aria-selected={index === highlighted}
+                // mousedown keeps the input focused, so the blur does not close the list before the pick
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  addChip(item);
+                }}
+                onMouseEnter={() => setHighlighted(index)}
+                className={`px-3 py-1.5 text-sm cursor-pointer truncate ${
+                  index === highlighted
+                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200'
+                    : 'text-gray-800 dark:text-gray-200'
+                }`}
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
