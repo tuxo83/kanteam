@@ -41,6 +41,13 @@ const rebuildFilteredBucket = (
 	};
 };
 
+// Parse as UTC so the displayed day never shifts with the viewer's timezone.
+const formatDueDate = (value: string): string => {
+	const date = new Date(`${value}T00:00:00Z`);
+	if (Number.isNaN(date.getTime())) return value;
+	return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+};
+
 interface MilestonesPageProps {
 	tasks: Task[];
 	statuses: string[];
@@ -59,6 +66,7 @@ const MilestonesPage: React.FC<MilestonesPageProps> = ({
 	onRefreshData,
 }) => {
 	const [newMilestone, setNewMilestone] = useState("");
+	const [newMilestoneDueDate, setNewMilestoneDueDate] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState<string | null>(null);
 	const [isSaving, setIsSaving] = useState(false);
@@ -73,6 +81,7 @@ const MilestonesPage: React.FC<MilestonesPageProps> = ({
 	const [removingMilestoneKey, setRemovingMilestoneKey] = useState<string | null>(null);
 	const [editingBucket, setEditingBucket] = useState<MilestoneBucket | null>(null);
 	const [editMilestoneName, setEditMilestoneName] = useState("");
+	const [editMilestoneDueDate, setEditMilestoneDueDate] = useState("");
 	const [removingBucket, setRemovingBucket] = useState<MilestoneBucket | null>(null);
 	const [removeTaskHandling, setRemoveTaskHandling] = useState<RemoveTaskHandling>("clear");
 	const [removeReassignTo, setRemoveReassignTo] = useState("");
@@ -233,6 +242,7 @@ const MilestonesPage: React.FC<MilestonesPageProps> = ({
 	const closeAddModal = () => {
 		setShowAddModal(false);
 		setNewMilestone("");
+		setNewMilestoneDueDate("");
 		setError(null);
 	};
 
@@ -249,8 +259,9 @@ const MilestonesPage: React.FC<MilestonesPageProps> = ({
 		setError(null);
 		setSuccess(null);
 		try {
-			await apiClient.createMilestone(value);
+			await apiClient.createMilestone(value, undefined, newMilestoneDueDate || undefined);
 			setNewMilestone("");
+			setNewMilestoneDueDate("");
 			setSuccess(`Added milestone "${value}"`);
 			setShowAddModal(false);
 			if (onRefreshData) {
@@ -306,10 +317,14 @@ const MilestonesPage: React.FC<MilestonesPageProps> = ({
 		});
 	};
 
+	const findMilestoneEntity = (milestoneId?: string): Milestone | undefined =>
+		milestoneId ? milestoneEntities.find((milestone) => milestone.id === milestoneId) : undefined;
+
 	const openEditModal = (bucket: MilestoneBucket) => {
 		if (!bucket.milestone) return;
 		setEditingBucket(bucket);
 		setEditMilestoneName(bucket.label || bucket.milestone);
+		setEditMilestoneDueDate(findMilestoneEntity(bucket.milestone)?.dueDate ?? "");
 		setModalError(null);
 		setError(null);
 		setSuccess(null);
@@ -318,6 +333,7 @@ const MilestonesPage: React.FC<MilestonesPageProps> = ({
 	const closeEditModal = () => {
 		setEditingBucket(null);
 		setEditMilestoneName("");
+		setEditMilestoneDueDate("");
 		setModalError(null);
 	};
 
@@ -351,9 +367,11 @@ const MilestonesPage: React.FC<MilestonesPageProps> = ({
 		setError(null);
 		setSuccess(null);
 		try {
-			await apiClient.updateMilestone(bucket.milestone, value);
+			await apiClient.updateMilestone(bucket.milestone, value, editMilestoneDueDate || null);
 			closeEditModal();
-			setSuccess(`Renamed milestone "${previousLabel}" to "${value}"`);
+			setSuccess(
+				value === previousLabel ? `Updated milestone "${value}"` : `Renamed milestone "${previousLabel}" to "${value}"`,
+			);
 			if (onRefreshData) {
 				await onRefreshData();
 			}
@@ -475,6 +493,8 @@ const MilestonesPage: React.FC<MilestonesPageProps> = ({
 		});
 	};
 
+	const todayIsoDate = new Date().toLocaleDateString("en-CA");
+
 	const safeIdSegment = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "-");
 
 	// Render a milestone card (drop target)
@@ -489,6 +509,8 @@ const MilestonesPage: React.FC<MilestonesPageProps> = ({
 		const isArchiving = archivingMilestoneKey === bucket.key;
 		const isSavingMilestone = savingMilestoneKey === bucket.key;
 		const isRemoving = removingMilestoneKey === bucket.key;
+		const dueDate = findMilestoneEntity(bucket.milestone)?.dueDate;
+		const isOverdue = !!dueDate && !bucket.isCompleted && dueDate < todayIsoDate;
 
 		return (
 			<div
@@ -507,9 +529,26 @@ const MilestonesPage: React.FC<MilestonesPageProps> = ({
 				<div className="px-5 py-4">
 					{/* Header row */}
 					<div className="flex items-center justify-between gap-4">
-						<h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
-							{bucket.label}
-						</h3>
+						<div className="flex min-w-0 items-center gap-2">
+							<h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
+								{bucket.label}
+							</h3>
+							{dueDate && (
+								<span
+									title={isOverdue ? "Overdue" : "Due date"}
+									className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+										isOverdue
+											? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+											: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+									}`}
+								>
+									<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+									</svg>
+									{formatDueDate(dueDate)}
+								</span>
+							)}
+						</div>
 						{isEmpty ? (
 							<span className="text-sm text-gray-400 dark:text-gray-500">
 								{isDragging ? "Drop here" : "No tasks"}
@@ -910,6 +949,29 @@ const MilestonesPage: React.FC<MilestonesPageProps> = ({
 						/>
 						{error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
 					</div>
+					<div className="space-y-2">
+						<label htmlFor="new-milestone-due-date" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+							Due date <span className="font-normal text-gray-500 dark:text-gray-400">(optional)</span>
+						</label>
+						<div className="flex items-center gap-2">
+							<input
+								id="new-milestone-due-date"
+								type="date"
+								value={newMilestoneDueDate}
+								onChange={(event) => setNewMilestoneDueDate(event.target.value)}
+								className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+							/>
+							{newMilestoneDueDate && (
+								<button
+									type="button"
+									onClick={() => setNewMilestoneDueDate("")}
+									className="shrink-0 px-2 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+								>
+									Clear
+								</button>
+							)}
+						</div>
+					</div>
 					<div className="flex justify-end gap-2">
 						<button
 							type="button"
@@ -948,6 +1010,29 @@ const MilestonesPage: React.FC<MilestonesPageProps> = ({
 							Renaming updates local tasks that reference this milestone.
 						</p>
 						{modalError && <p className="text-xs text-red-600 dark:text-red-400">{modalError}</p>}
+					</div>
+					<div className="space-y-2">
+						<label htmlFor="edit-milestone-due-date" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+							Due date <span className="font-normal text-gray-500 dark:text-gray-400">(optional)</span>
+						</label>
+						<div className="flex items-center gap-2">
+							<input
+								id="edit-milestone-due-date"
+								type="date"
+								value={editMilestoneDueDate}
+								onChange={(event) => setEditMilestoneDueDate(event.target.value)}
+								className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+							/>
+							{editMilestoneDueDate && (
+								<button
+									type="button"
+									onClick={() => setEditMilestoneDueDate("")}
+									className="shrink-0 px-2 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+								>
+									Clear
+								</button>
+							)}
+						</div>
 					</div>
 					<div className="flex justify-end gap-2">
 						<button

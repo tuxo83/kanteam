@@ -20,6 +20,7 @@ import {
 	type TaskUpdateInput,
 } from "../types/index.ts";
 import { watchConfig } from "../utils/config-watcher.ts";
+import { isValidDueDate } from "../utils/due-date.ts";
 import { resolveMilestoneInputForStorage } from "../utils/milestone-storage.ts";
 import { getVersion } from "../utils/version.ts";
 
@@ -1463,11 +1464,15 @@ export class BacklogServer {
 
 	private async handleCreateMilestone(req: Request): Promise<Response> {
 		try {
-			const body = (await req.json()) as { title?: string; description?: string };
+			const body = (await req.json()) as { title?: string; description?: string; dueDate?: string };
 			const title = body.title?.trim();
+			const dueDate = typeof body.dueDate === "string" ? body.dueDate.trim() || undefined : undefined;
 
 			if (!title) {
 				return Response.json({ error: "Milestone title is required" }, { status: 400 });
+			}
+			if (dueDate && !isValidDueDate(dueDate)) {
+				return Response.json({ error: "Due date must be YYYY-MM-DD" }, { status: 400 });
 			}
 
 			// Check for duplicates
@@ -1507,7 +1512,14 @@ export class BacklogServer {
 				return Response.json({ error: "A milestone with this title or ID already exists" }, { status: 400 });
 			}
 
-			const milestone = await this.core.filesystem.createMilestone(title, body.description);
+			const milestone = await this.core.filesystem.createMilestone(title, body.description, dueDate);
+			if (await this.core.shouldAutoCommit()) {
+				const milestonePath = await this.core.filesystem.getMilestoneFilePath(milestone.id);
+				if (milestonePath) {
+					await this.core.git.addFile(milestonePath);
+					await this.core.git.commitFiles(`backlog: Add milestone ${milestone.id}`, [milestonePath]);
+				}
+			}
 			return Response.json(milestone, { status: 201 });
 		} catch (error) {
 			console.error("Error creating milestone:", error);
@@ -1525,12 +1537,26 @@ export class BacklogServer {
 				return Response.json({ error: "Milestone title is required" }, { status: 400 });
 			}
 
+			const dueDateInput = typeof body.dueDate === "string" ? body.dueDate.trim() : "";
+			if (dueDateInput && !isValidDueDate(dueDateInput)) {
+				return Response.json({ error: "Due date must be YYYY-MM-DD" }, { status: 400 });
+			}
+
 			const sourceMilestone = await this.core.filesystem.loadMilestone(milestoneId);
-			const result = await new MilestoneHandlers(this.core).renameMilestone({
+			const handlers = new MilestoneHandlers(this.core);
+			const result = await handlers.renameMilestone({
 				from: milestoneId,
 				to: title,
 				updateTasks,
 			});
+			// dueDate is only touched when the client sends the key; null or "" clears it.
+			if ("dueDate" in body && (body.dueDate === null || typeof body.dueDate === "string")) {
+				const dueDateResult = await handlers.setMilestoneDueDate({
+					name: sourceMilestone?.id ?? milestoneId,
+					dueDate: body.dueDate,
+				});
+				result.content.push(...dueDateResult.content);
+			}
 			const milestone =
 				(await this.core.filesystem.loadMilestone(sourceMilestone?.id ?? milestoneId)) ??
 				(await this.core.filesystem.loadMilestone(title));

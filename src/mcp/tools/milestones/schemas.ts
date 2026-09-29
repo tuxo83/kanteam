@@ -21,8 +21,32 @@ export const milestoneAddSchema: JsonSchema = {
 			maxLength: 2000,
 			description: "Optional description for the milestone",
 		},
+		dueDate: {
+			type: "string",
+			maxLength: 10,
+			description: "Optional due date (YYYY-MM-DD)",
+		},
 	},
 	required: ["name"],
+	additionalProperties: false,
+};
+
+export const milestoneSetDueDateSchema: JsonSchema = {
+	type: "object",
+	properties: {
+		name: {
+			type: "string",
+			minLength: 1,
+			maxLength: 100,
+			description: "Milestone name or ID (case-insensitive match)",
+		},
+		dueDate: {
+			type: "string",
+			maxLength: 10,
+			description: "Due date (YYYY-MM-DD); empty string clears it",
+		},
+	},
+	required: ["name", "dueDate"],
 	additionalProperties: false,
 };
 

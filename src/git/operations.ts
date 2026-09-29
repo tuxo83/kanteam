@@ -118,14 +118,18 @@ export class GitOperations {
 			return;
 		}
 
+		// Commit only the paths that actually have staged changes: a path git has never tracked
+		// (e.g. a milestone file created without a commit, then archived) would make
+		// `git commit -- <path>` fail with "pathspec did not match".
 		const { stdout: stagedForPaths } = await this.execGit(
-			["diff", "--name-only", "--cached", "--", ...uniqueRelativePaths],
+			["diff", "--name-only", "--cached", "--no-renames", "-z", "--", ...uniqueRelativePaths],
 			{
 				cwd: resolvedRepoRoot,
 				readOnly: true,
 			},
 		);
-		if (!stagedForPaths.trim()) {
+		const stagedPaths = stagedForPaths.split("\0").filter((path) => path.length > 0);
+		if (stagedPaths.length === 0) {
 			return;
 		}
 
@@ -134,7 +138,7 @@ export class GitOperations {
 			args.push("--no-verify");
 		}
 		args.push(...commitAuthorArgs());
-		args.push("--", ...uniqueRelativePaths);
+		args.push("--", ...stagedPaths);
 		await this.execGit(args, { cwd: resolvedRepoRoot });
 		await this.autoPushIfEnabled(resolvedRepoRoot);
 	}

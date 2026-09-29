@@ -917,10 +917,11 @@ export class FileSystem {
 		return `${id} - ${safeTitle}.md`;
 	}
 
-	private serializeMilestoneContent(id: string, title: string, rawContent: string): string {
+	private serializeMilestoneContent(id: string, title: string, rawContent: string, dueDate?: string): string {
+		const dueDateLine = dueDate ? `\ndue_date: "${dueDate}"` : "";
 		return `---
 id: ${id}
-title: "${title.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"
+title: "${title.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"${dueDateLine}
 ---
 
 ${rawContent.trim()}
@@ -1094,7 +1095,7 @@ ${rawContent.trim()}
 		}
 	}
 
-	async createMilestone(title: string, description?: string): Promise<Milestone> {
+	async createMilestone(title: string, description?: string, dueDate?: string): Promise<Milestone> {
 		return await this.withCreateLock(async () => {
 			const milestonesDir = await this.getMilestonesDir();
 
@@ -1146,6 +1147,7 @@ ${rawContent.trim()}
 				`## Description
 
 ${description || `Milestone: ${title}`}`,
+				dueDate,
 			);
 
 			const filepath = join(milestonesDir, filename);
@@ -1155,9 +1157,24 @@ ${description || `Milestone: ${title}`}`,
 				id,
 				title,
 				description: description || `Milestone: ${title}`,
+				dueDate,
 				rawContent: parseMilestone(content).rawContent,
 			};
 		});
+	}
+
+	async setMilestoneDueDate(
+		identifier: string,
+		dueDate: string | undefined,
+	): Promise<{ success: boolean; filePath?: string; milestone?: Milestone }> {
+		const milestoneMatch = await this.findMilestoneFile(identifier, "active");
+		if (!milestoneMatch) {
+			return { success: false };
+		}
+		const { milestone, filepath } = milestoneMatch;
+		const updatedContent = this.serializeMilestoneContent(milestone.id, milestone.title, milestone.rawContent, dueDate);
+		await Bun.write(filepath, updatedContent);
+		return { success: true, filePath: filepath, milestone: parseMilestone(updatedContent) };
 	}
 
 	async renameMilestone(
@@ -1197,7 +1214,12 @@ ${description || `Milestone: ${title}`}`,
 				milestone.title,
 				normalizedTitle,
 			);
-			const updatedContent = this.serializeMilestoneContent(milestone.id, normalizedTitle, nextRawContent);
+			const updatedContent = this.serializeMilestoneContent(
+				milestone.id,
+				normalizedTitle,
+				nextRawContent,
+				milestone.dueDate,
+			);
 
 			if (sourcePath !== targetPath) {
 				if (await Bun.file(targetPath).exists()) {

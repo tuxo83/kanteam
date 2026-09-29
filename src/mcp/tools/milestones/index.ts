@@ -1,7 +1,13 @@
 import type { McpServer } from "../../server.ts";
 import type { McpToolHandler } from "../../types.ts";
 import { createSimpleValidatedTool } from "../../validation/tool-wrapper.ts";
-import type { MilestoneAddArgs, MilestoneArchiveArgs, MilestoneRemoveArgs, MilestoneRenameArgs } from "./handlers.ts";
+import type {
+	MilestoneAddArgs,
+	MilestoneArchiveArgs,
+	MilestoneRemoveArgs,
+	MilestoneRenameArgs,
+	MilestoneSetDueDateArgs,
+} from "./handlers.ts";
 import { MilestoneHandlers } from "./handlers.ts";
 import {
 	milestoneAddSchema,
@@ -9,6 +15,7 @@ import {
 	milestoneListSchema,
 	milestoneRemoveSchema,
 	milestoneRenameSchema,
+	milestoneSetDueDateSchema,
 } from "./schemas.ts";
 
 export function registerMilestoneTools(server: McpServer): void {
@@ -47,6 +54,17 @@ export function registerMilestoneTools(server: McpServer): void {
 		async (input) => handlers.renameMilestone(input as MilestoneRenameArgs),
 	);
 
+	const setDueDateTool: McpToolHandler = createSimpleValidatedTool(
+		{
+			name: "milestone_set_due_date",
+			description: "Set or clear the due date of a milestone",
+			inputSchema: milestoneSetDueDateSchema,
+			annotations: { title: "Set Milestone Due Date", destructiveHint: false },
+		},
+		milestoneSetDueDateSchema,
+		async (input) => handlers.setMilestoneDueDate(input as MilestoneSetDueDateArgs),
+	);
+
 	const removeTool: McpToolHandler = createSimpleValidatedTool(
 		{
 			name: "milestone_remove",
@@ -72,6 +90,7 @@ export function registerMilestoneTools(server: McpServer): void {
 	server.addTool(listTool);
 	server.addTool(addTool);
 	server.addTool(renameTool);
+	server.addTool(setDueDateTool);
 	server.addTool(removeTool);
 	server.addTool(archiveTool);
 }
