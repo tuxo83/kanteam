@@ -1,6 +1,7 @@
 import { rename as moveFile } from "node:fs/promises";
 import type { Core } from "../../../core/backlog.ts";
 import type { Milestone, Task } from "../../../types/index.ts";
+import { isValidDueDate } from "../../../utils/due-date.ts";
 import { BacklogToolError } from "../../errors/mcp-errors.ts";
 import type { CallToolResult } from "../../types.ts";
 import {
@@ -14,7 +15,25 @@ import {
 export type MilestoneAddArgs = {
 	name: string;
 	description?: string;
+	dueDate?: string;
 };
+
+export type MilestoneSetDueDateArgs = {
+	name: string;
+	/** Empty string or null clears the due date. */
+	dueDate?: string | null;
+};
+
+function normalizeDueDateArg(value: string | null | undefined): string | undefined {
+	const trimmed = value?.trim() ?? "";
+	if (!trimmed) {
+		return undefined;
+	}
+	if (!isValidDueDate(trimmed)) {
+		throw new BacklogToolError(`Invalid due date "${trimmed}". Expected YYYY-MM-DD.`, "VALIDATION_ERROR");
+	}
+	return trimmed;
+}
 
 export type MilestoneRenameArgs = {
 	from: string;
@@ -320,7 +339,7 @@ export class MilestoneHandlers {
 			.sort((a, b) => a.localeCompare(b));
 
 		const blocks: string[] = [];
-		const milestoneLines = fileMilestones.map((m) => `${m.id}: ${m.title}`);
+		const milestoneLines = fileMilestones.map((m) => `${m.id}: ${m.title}${m.dueDate ? ` (due ${m.dueDate})` : ""}`);
 		blocks.push(formatListBlock(`Milestones (${fileMilestones.length}):`, milestoneLines));
 		blocks.push(formatListBlock(`Milestones found on tasks without files (${unconfigured.length}):`, unconfigured));
 		blocks.push(
@@ -345,6 +364,7 @@ export class MilestoneHandlers {
 		if (!name) {
 			throw new BacklogToolError("Milestone name cannot be empty.", "VALIDATION_ERROR");
 		}
+		const dueDate = normalizeDueDateArg(args.dueDate);
 
 		// Check for duplicates in existing milestone files
 		const existing = await this.listFileMilestones();
@@ -361,7 +381,7 @@ export class MilestoneHandlers {
 		}
 
 		// Create milestone file
-		const milestone = await this.core.filesystem.createMilestone(name, args.description);
+		const milestone = await this.core.filesystem.createMilestone(name, args.description, dueDate);
 		const milestonePath = await this.core.filesystem.getMilestoneFilePath(milestone.id);
 		await this.commitMilestoneMutation(`backlog: Add milestone ${milestone.id}`, {
 			taskFilePaths: milestonePath ? [milestonePath] : [],
@@ -371,7 +391,41 @@ export class MilestoneHandlers {
 			content: [
 				{
 					type: "text",
-					text: `Created milestone "${milestone.title}" (${milestone.id}).`,
+					text: `Created milestone "${milestone.title}" (${milestone.id})${dueDate ? `, due ${dueDate}` : ""}.`,
+				},
+			],
+		};
+	}
+
+	async setMilestoneDueDate(args: MilestoneSetDueDateArgs): Promise<CallToolResult> {
+		const name = normalizeMilestoneName(args.name);
+		const dueDate = normalizeDueDateArg(args.dueDate);
+		const fileMilestones = await this.listFileMilestones();
+		const sourceMilestone = findActiveMilestoneByAlias(name, fileMilestones);
+		if (!sourceMilestone) {
+			throw new BacklogToolError(`Milestone not found: "${name}"`, "NOT_FOUND");
+		}
+		if ((sourceMilestone.dueDate ?? undefined) === dueDate) {
+			return {
+				content: [{ type: "text", text: `Milestone "${sourceMilestone.title}" (${sourceMilestone.id}) unchanged.` }],
+			};
+		}
+
+		const result = await this.core.filesystem.setMilestoneDueDate(sourceMilestone.id, dueDate);
+		if (!result.success || !result.filePath) {
+			throw new BacklogToolError(`Failed to update milestone "${sourceMilestone.title}".`, "INTERNAL_ERROR");
+		}
+		await this.commitMilestoneMutation(`backlog: Update milestone ${sourceMilestone.id} due date`, {
+			taskFilePaths: [result.filePath],
+		});
+
+		return {
+			content: [
+				{
+					type: "text",
+					text: dueDate
+						? `Set due date of milestone "${sourceMilestone.title}" (${sourceMilestone.id}) to ${dueDate}.`
+						: `Cleared due date of milestone "${sourceMilestone.title}" (${sourceMilestone.id}).`,
 				},
 			],
 		};

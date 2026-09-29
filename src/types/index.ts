@@ -191,6 +191,7 @@ export interface Milestone {
 	id: string;
 	title: string;
 	description: string;
+	dueDate?: string; // YYYY-MM-DD
 	readonly rawContent: string; // Raw markdown content without frontmatter
 }
 

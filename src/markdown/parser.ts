@@ -235,6 +235,7 @@ export function parseMilestone(content: string): Milestone {
 		id: String(frontmatter.id || ""),
 		title: String(frontmatter.title || ""),
 		description: extractSection(rawContent, "Description") || "",
+		dueDate: frontmatter.due_date ? normalizeDate(frontmatter.due_date) : undefined,
 		rawContent,
 	};
 }

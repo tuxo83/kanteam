@@ -3195,10 +3195,12 @@ addHelpSchema(milestoneCmd.command("list"), {
 		const active = buckets.filter((bucket) => !bucket.isNoMilestone && !bucket.isCompleted);
 		const completed = buckets.filter((bucket) => !bucket.isNoMilestone && bucket.isCompleted);
 
+		const dueDateById = new Map(milestones.map((milestone) => [milestone.id, milestone.dueDate]));
 		const formatBucket = (bucket: (typeof buckets)[number]) => {
 			const id = bucket.milestone ?? bucket.label;
 			const label = bucket.label;
-			return `  ${id}: ${label} (${bucket.doneCount}/${bucket.total} done)`;
+			const dueDate = bucket.milestone ? dueDateById.get(bucket.milestone) : undefined;
+			return `  ${id}: ${label} (${bucket.doneCount}/${bucket.total} done)${dueDate ? ` — due ${dueDate}` : ""}`;
 		};
 
 		console.log(`Active milestones (${active.length}):`);
@@ -3225,15 +3227,49 @@ addHelpSchema(milestoneCmd.command("list"), {
 addHelpSchema(milestoneCmd.command("add <name>"), {
 	reads: "Active milestone files for duplicate and alias validation",
 	required: [{ name: "name", type: "String", description: "Milestone name/title, trimmed before storage" }],
-	optional: [{ name: "description", type: "Markdown", description: "Optional milestone description" }],
+	optional: [
+		{ name: "description", type: "Markdown", description: "Optional milestone description" },
+		{ name: "due-date", type: "Date (YYYY-MM-DD)", description: "Optional milestone due date" },
+	],
 	writes: "Creates a milestone markdown file in the active milestones directory",
 	output: "Created milestone title and ID",
-	examples: ['backlog milestone add "Release 1.0"', 'backlog milestone add "Beta" --description "Beta scope"'],
+	examples: [
+		'backlog milestone add "Release 1.0"',
+		'backlog milestone add "Beta" --description "Beta scope"',
+		'backlog milestone add "Beta" --due-date 2026-12-15',
+	],
 })
 	.description("add a milestone file")
 	.option("-d, --description <text>", "milestone description")
-	.action(async (name: string, options: { description?: string }) => {
-		await runMilestoneMutation((handlers) => handlers.addMilestone({ name, description: options.description }));
+	.option("--due-date <date>", "milestone due date (YYYY-MM-DD)")
+	.action(async (name: string, options: { description?: string; dueDate?: string }) => {
+		await runMilestoneMutation((handlers) =>
+			handlers.addMilestone({ name, description: options.description, dueDate: options.dueDate }),
+		);
+	});
+
+addHelpSchema(milestoneCmd.command("due-date <name> [date]"), {
+	reads: "Active milestone files",
+	required: [{ name: "name", type: "Milestone ID or title", description: "Active milestone to update" }],
+	optional: [
+		{ name: "date", type: "Date (YYYY-MM-DD)", description: "New due date; required unless --clear" },
+		{ name: "clear", type: "Boolean", description: "Remove the due date" },
+	],
+	writes: "Updates the due_date field of the milestone file",
+	output: "Due date update summary",
+	examples: ['backlog milestone due-date "Release 1.0" 2026-12-15', "backlog milestone due-date m-1 --clear"],
+})
+	.description("set or clear a milestone due date")
+	.option("--clear", "remove the due date")
+	.action(async (name: string, date: string | undefined, options: { clear?: boolean }) => {
+		if (!date && !options.clear) {
+			console.error("Provide a date (YYYY-MM-DD) or --clear.");
+			process.exitCode = 1;
+			return;
+		}
+		await runMilestoneMutation((handlers) =>
+			handlers.setMilestoneDueDate({ name, dueDate: options.clear ? null : date }),
+		);
 	});
 
 addHelpSchema(milestoneCmd.command("rename <from> <to>"), {

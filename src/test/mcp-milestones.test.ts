@@ -386,6 +386,31 @@ describe("MCP milestone tools", () => {
 		expect(milestoneFiles).not.toContain("m-0 - release-1.0.md");
 	});
 
+	it("sets and clears a milestone due date", async () => {
+		const add = await server.testInterface.callTool({
+			params: { name: "milestone_add", arguments: { name: "Release 1.0", dueDate: "2026-12-15" } },
+		});
+		expect(getText(add.content)).toContain("due 2026-12-15");
+
+		const list = await server.testInterface.callTool({ params: { name: "milestone_list", arguments: {} } });
+		expect(getText(list.content)).toContain("m-0: Release 1.0 (due 2026-12-15)");
+
+		await server.testInterface.callTool({
+			params: { name: "milestone_set_due_date", arguments: { name: "Release 1.0", dueDate: "2027-01-31" } },
+		});
+		expect((await server.filesystem.loadMilestone("m-0"))?.dueDate).toBe("2027-01-31");
+
+		await server.testInterface.callTool({
+			params: { name: "milestone_set_due_date", arguments: { name: "m-0", dueDate: "" } },
+		});
+		expect((await server.filesystem.loadMilestone("m-0"))?.dueDate).toBeUndefined();
+
+		const invalid = await server.testInterface.callTool({
+			params: { name: "milestone_set_due_date", arguments: { name: "m-0", dueDate: "tomorrow" } },
+		});
+		expect(invalid.isError).toBe(true);
+	});
+
 	it("keeps git clean when renaming milestones with autoCommit enabled", async () => {
 		await server.testInterface.callTool({
 			params: { name: "milestone_add", arguments: { name: "Release 1.0" } },
