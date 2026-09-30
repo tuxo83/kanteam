@@ -50,6 +50,25 @@ export const milestoneSetDueDateSchema: JsonSchema = {
 	additionalProperties: false,
 };
 
+export const milestoneSetDescriptionSchema: JsonSchema = {
+	type: "object",
+	properties: {
+		name: {
+			type: "string",
+			minLength: 1,
+			maxLength: 100,
+			description: "Milestone name or ID (case-insensitive match)",
+		},
+		description: {
+			type: "string",
+			maxLength: 2000,
+			description: "Plain-text description; empty string clears it",
+		},
+	},
+	required: ["name", "description"],
+	additionalProperties: false,
+};
+
 export const milestoneRenameSchema: JsonSchema = {
 	type: "object",
 	properties: {

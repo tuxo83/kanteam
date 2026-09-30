@@ -2,6 +2,7 @@ import { rename as moveFile } from "node:fs/promises";
 import type { Core } from "../../../core/backlog.ts";
 import type { Milestone, Task } from "../../../types/index.ts";
 import { isValidDueDate } from "../../../utils/due-date.ts";
+import { getMilestoneDescription } from "../../../utils/milestone-description.ts";
 import { BacklogToolError } from "../../errors/mcp-errors.ts";
 import type { CallToolResult } from "../../types.ts";
 import {
@@ -22,6 +23,12 @@ export type MilestoneSetDueDateArgs = {
 	name: string;
 	/** Empty string or null clears the due date. */
 	dueDate?: string | null;
+};
+
+export type MilestoneSetDescriptionArgs = {
+	name: string;
+	/** Plain text; an empty string clears the description. */
+	description: string;
 };
 
 function normalizeDueDateArg(value: string | null | undefined): string | undefined {
@@ -339,7 +346,11 @@ export class MilestoneHandlers {
 			.sort((a, b) => a.localeCompare(b));
 
 		const blocks: string[] = [];
-		const milestoneLines = fileMilestones.map((m) => `${m.id}: ${m.title}${m.dueDate ? ` (due ${m.dueDate})` : ""}`);
+		const milestoneLines = fileMilestones.map((m) => {
+			const description = getMilestoneDescription(m);
+			const header = `${m.id}: ${m.title}${m.dueDate ? ` (due ${m.dueDate})` : ""}`;
+			return description ? `${header}\n      ${description.replace(/\n/g, "\n      ")}` : header;
+		});
 		blocks.push(formatListBlock(`Milestones (${fileMilestones.length}):`, milestoneLines));
 		blocks.push(formatListBlock(`Milestones found on tasks without files (${unconfigured.length}):`, unconfigured));
 		blocks.push(
@@ -397,35 +408,69 @@ export class MilestoneHandlers {
 		};
 	}
 
-	async setMilestoneDueDate(args: MilestoneSetDueDateArgs): Promise<CallToolResult> {
-		const name = normalizeMilestoneName(args.name);
-		const dueDate = normalizeDueDateArg(args.dueDate);
-		const fileMilestones = await this.listFileMilestones();
-		const sourceMilestone = findActiveMilestoneByAlias(name, fileMilestones);
+	/** Shared lookup + write + commit for single-field milestone edits. */
+	private async updateMilestoneField(
+		nameArg: string,
+		updates: { dueDate?: string | undefined; description?: string },
+		fieldLabel: string,
+	): Promise<{ milestone: Milestone; changed: boolean }> {
+		const name = normalizeMilestoneName(nameArg);
+		const sourceMilestone = findActiveMilestoneByAlias(name, await this.listFileMilestones());
 		if (!sourceMilestone) {
 			throw new BacklogToolError(`Milestone not found: "${name}"`, "NOT_FOUND");
 		}
-		if ((sourceMilestone.dueDate ?? undefined) === dueDate) {
-			return {
-				content: [{ type: "text", text: `Milestone "${sourceMilestone.title}" (${sourceMilestone.id}) unchanged.` }],
-			};
+		const unchanged =
+			("dueDate" in updates ? (sourceMilestone.dueDate ?? undefined) === updates.dueDate : true) &&
+			(updates.description === undefined || sourceMilestone.description.trim() === updates.description);
+		if (unchanged) {
+			return { milestone: sourceMilestone, changed: false };
 		}
 
-		const result = await this.core.filesystem.setMilestoneDueDate(sourceMilestone.id, dueDate);
+		const result = await this.core.filesystem.updateMilestone(sourceMilestone.id, updates);
 		if (!result.success || !result.filePath) {
 			throw new BacklogToolError(`Failed to update milestone "${sourceMilestone.title}".`, "INTERNAL_ERROR");
 		}
-		await this.commitMilestoneMutation(`backlog: Update milestone ${sourceMilestone.id} due date`, {
+		await this.commitMilestoneMutation(`backlog: Update milestone ${sourceMilestone.id} ${fieldLabel}`, {
 			taskFilePaths: [result.filePath],
 		});
+		return { milestone: sourceMilestone, changed: true };
+	}
 
+	private unchangedMilestoneResult(milestone: Milestone): CallToolResult {
+		return { content: [{ type: "text", text: `Milestone "${milestone.title}" (${milestone.id}) unchanged.` }] };
+	}
+
+	async setMilestoneDueDate(args: MilestoneSetDueDateArgs): Promise<CallToolResult> {
+		const dueDate = normalizeDueDateArg(args.dueDate);
+		const { milestone, changed } = await this.updateMilestoneField(args.name, { dueDate }, "due date");
+		if (!changed) {
+			return this.unchangedMilestoneResult(milestone);
+		}
 		return {
 			content: [
 				{
 					type: "text",
 					text: dueDate
-						? `Set due date of milestone "${sourceMilestone.title}" (${sourceMilestone.id}) to ${dueDate}.`
-						: `Cleared due date of milestone "${sourceMilestone.title}" (${sourceMilestone.id}).`,
+						? `Set due date of milestone "${milestone.title}" (${milestone.id}) to ${dueDate}.`
+						: `Cleared due date of milestone "${milestone.title}" (${milestone.id}).`,
+				},
+			],
+		};
+	}
+
+	async setMilestoneDescription(args: MilestoneSetDescriptionArgs): Promise<CallToolResult> {
+		const description = (args.description ?? "").trim();
+		const { milestone, changed } = await this.updateMilestoneField(args.name, { description }, "description");
+		if (!changed) {
+			return this.unchangedMilestoneResult(milestone);
+		}
+		return {
+			content: [
+				{
+					type: "text",
+					text: description
+						? `Updated description of milestone "${milestone.title}" (${milestone.id}).`
+						: `Cleared description of milestone "${milestone.title}" (${milestone.id}).`,
 				},
 			],
 		};

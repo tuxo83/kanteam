@@ -386,6 +386,22 @@ describe("MCP milestone tools", () => {
 		expect(milestoneFiles).not.toContain("m-0 - release-1.0.md");
 	});
 
+	it("sets a milestone description and lists it", async () => {
+		await server.testInterface.callTool({
+			params: { name: "milestone_add", arguments: { name: "Release 1.0", dueDate: "2026-12-15" } },
+		});
+		const set = await server.testInterface.callTool({
+			params: { name: "milestone_set_description", arguments: { name: "m-0", description: "Public launch scope" } },
+		});
+		expect(getText(set.content)).toContain("Updated description");
+		const milestone = await server.filesystem.loadMilestone("m-0");
+		expect(milestone?.description).toBe("Public launch scope");
+		expect(milestone?.dueDate).toBe("2026-12-15");
+
+		const list = await server.testInterface.callTool({ params: { name: "milestone_list", arguments: {} } });
+		expect(getText(list.content)).toContain("Public launch scope");
+	});
+
 	it("sets and clears a milestone due date", async () => {
 		const add = await server.testInterface.callTool({
 			params: { name: "milestone_add", arguments: { name: "Release 1.0", dueDate: "2026-12-15" } },

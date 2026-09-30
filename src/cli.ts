@@ -3272,6 +3272,33 @@ addHelpSchema(milestoneCmd.command("due-date <name> [date]"), {
 		);
 	});
 
+addHelpSchema(milestoneCmd.command("description <name> [text]"), {
+	reads: "Active milestone files",
+	required: [{ name: "name", type: "Milestone ID or title", description: "Active milestone to update" }],
+	optional: [
+		{ name: "text", type: "String", description: "New plain-text description; required unless --clear" },
+		{ name: "clear", type: "Boolean", description: "Remove the description" },
+	],
+	writes: "Replaces the Description section of the milestone file",
+	output: "Description update summary",
+	examples: [
+		'backlog milestone description "Release 1.0" "Everything needed for the public launch"',
+		"backlog milestone description m-1 --clear",
+	],
+})
+	.description("set or clear a milestone description")
+	.option("--clear", "remove the description")
+	.action(async (name: string, text: string | undefined, options: { clear?: boolean }) => {
+		if (!text && !options.clear) {
+			console.error("Provide a description or --clear.");
+			process.exitCode = 1;
+			return;
+		}
+		await runMilestoneMutation((handlers) =>
+			handlers.setMilestoneDescription({ name, description: options.clear ? "" : (text ?? "") }),
+		);
+	});
+
 addHelpSchema(milestoneCmd.command("rename <from> <to>"), {
 	reads: "Active and archived milestone files, plus local tasks when task updates are enabled",
 	required: [
