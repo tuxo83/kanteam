@@ -482,17 +482,18 @@ export class ApiClient {
 		return response.json();
 	}
 
+	/** Only the fields passed in `changes` are updated; `dueDate: null` clears it. */
 	async updateMilestone(
 		id: string,
 		title: string,
-		dueDate?: string | null,
+		changes: { dueDate?: string | null; description?: string } = {},
 	): Promise<{ success: boolean; milestone?: Milestone | null; message?: string }> {
 		const response = await fetch(`${API_BASE}/milestones/${encodeURIComponent(id)}`, {
 			method: "PUT",
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(dueDate === undefined ? { title } : { title, dueDate }),
+			body: JSON.stringify({ title, ...changes }),
 		});
 		if (!response.ok) {
 			const data = await response.json().catch(() => ({}));

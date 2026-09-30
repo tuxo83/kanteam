@@ -119,7 +119,7 @@ export default function BoardPage({
 	const filterPriority = searchParams.get('priority') ?? '';
 
 	return (
-		<div className="container mx-auto px-4 py-8 h-full flex flex-col transition-colors duration-200">
+		<div className="w-full px-4 py-8 h-full flex flex-col transition-colors duration-200">
 			<Board
 				onEditTask={handleEditTask}
 				onNewTask={onNewTask}

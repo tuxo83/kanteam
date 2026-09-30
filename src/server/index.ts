@@ -1557,6 +1557,13 @@ export class BacklogServer {
 				});
 				result.content.push(...dueDateResult.content);
 			}
+			if (typeof body.description === "string") {
+				const descriptionResult = await handlers.setMilestoneDescription({
+					name: sourceMilestone?.id ?? milestoneId,
+					description: body.description,
+				});
+				result.content.push(...descriptionResult.content);
+			}
 			const milestone =
 				(await this.core.filesystem.loadMilestone(sourceMilestone?.id ?? milestoneId)) ??
 				(await this.core.filesystem.loadMilestone(title));

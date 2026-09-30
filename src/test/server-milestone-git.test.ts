@@ -145,4 +145,30 @@ describe("BacklogServer milestone git commits", () => {
 		expect(editRes.status).toBe(400);
 		expect((await filesystem.loadMilestone(created.id))?.dueDate).toBeUndefined();
 	});
+
+	it("sets and clears a milestone description without touching its due date", async () => {
+		const createRes = await api("/api/milestones", {
+			method: "POST",
+			body: JSON.stringify({ title: "Release 1.0", description: "First scope", dueDate: "2026-12-15" }),
+		});
+		const created = (await createRes.json()) as { id: string };
+		expect((await filesystem.loadMilestone(created.id))?.description).toBe("First scope");
+
+		const editRes = await api(`/api/milestones/${created.id}`, {
+			method: "PUT",
+			body: JSON.stringify({ title: "Release 1.0", description: "Line one\nLine two $1" }),
+		});
+		expect(editRes.status).toBe(200);
+		const edited = await filesystem.loadMilestone(created.id);
+		expect(edited?.description).toBe("Line one\nLine two $1");
+		expect(edited?.dueDate).toBe("2026-12-15");
+		expect(await gitStatus()).toBe("");
+		expect(await lastCommitMessage()).toBe(`backlog: Update milestone ${created.id} description`);
+
+		await api(`/api/milestones/${created.id}`, {
+			method: "PUT",
+			body: JSON.stringify({ title: "Release 1.0", description: "" }),
+		});
+		expect((await filesystem.loadMilestone(created.id))?.description).toBe("");
+	});
 });

@@ -928,6 +928,15 @@ ${rawContent.trim()}
 `;
 	}
 
+	private replaceMilestoneDescription(rawContent: string, description: string): string {
+		const descriptionSectionPattern = /(##\s+Description\s*(?:\r?\n)+)([\s\S]*?)(?=(?:\r?\n)##\s+|$)/i;
+		if (!descriptionSectionPattern.test(rawContent)) {
+			return `## Description\n\n${description}\n\n${rawContent.trim()}`;
+		}
+		// A replacer function keeps "$" sequences in the description literal.
+		return rawContent.replace(descriptionSectionPattern, (_section, heading: string) => `${heading}${description}\n`);
+	}
+
 	private rewriteDefaultMilestoneDescription(rawContent: string, previousTitle: string, nextTitle: string): string {
 		const defaultDescription = `Milestone: ${previousTitle}`;
 		const descriptionSectionPattern = /(##\s+Description\s*(?:\r?\n)+)([\s\S]*?)(?=(?:\r?\n)##\s+|$)/i;
@@ -1163,16 +1172,22 @@ ${description || `Milestone: ${title}`}`,
 		});
 	}
 
-	async setMilestoneDueDate(
+	/** Updates only the fields present in `updates`; `dueDate: undefined` clears the due date. */
+	async updateMilestone(
 		identifier: string,
-		dueDate: string | undefined,
+		updates: { dueDate?: string | undefined; description?: string },
 	): Promise<{ success: boolean; filePath?: string; milestone?: Milestone }> {
 		const milestoneMatch = await this.findMilestoneFile(identifier, "active");
 		if (!milestoneMatch) {
 			return { success: false };
 		}
 		const { milestone, filepath } = milestoneMatch;
-		const updatedContent = this.serializeMilestoneContent(milestone.id, milestone.title, milestone.rawContent, dueDate);
+		const dueDate = "dueDate" in updates ? updates.dueDate : milestone.dueDate;
+		const rawContent =
+			updates.description === undefined
+				? milestone.rawContent
+				: this.replaceMilestoneDescription(milestone.rawContent, updates.description);
+		const updatedContent = this.serializeMilestoneContent(milestone.id, milestone.title, rawContent, dueDate);
 		await Bun.write(filepath, updatedContent);
 		return { success: true, filePath: filepath, milestone: parseMilestone(updatedContent) };
 	}

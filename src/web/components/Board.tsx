@@ -7,6 +7,8 @@ import { collectAvailableAssignees } from '../../utils/assignee';
 import { collectArchivedMilestoneKeys, milestoneKey } from '../utils/milestones';
 import { getTerminalStatus } from '../../utils/terminal-status';
 import TaskColumn from './TaskColumn';
+import MilestoneDueDateBadge from './MilestoneDueDateBadge';
+import { getMilestoneDescription } from '../../utils/milestone-description';
 import CleanupModal from './CleanupModal';
 import LabelFilterDropdown from './LabelFilterDropdown';
 import { SuccessToast } from './SuccessToast';
@@ -436,6 +438,8 @@ const Board: React.FC<BoardProps> = ({
 
   // Layout:
   // - Columns have a fixed width (BOARD_COLUMN_WIDTH); beyond available space, the board scrolls horizontally
+  // - Columns are centered while they fit: the row is at least as wide as the board and grows past it
+  //   (w-max min-w-full), so centering never clips the first columns once scrolling kicks in
   // - The board fills the viewport and each column scrolls on its own, so the horizontal
   //   scrollbar stays at the bottom of the screen instead of under the longest column
   // - Works uniformly for any number of columns without per-count conditionals
@@ -541,6 +545,10 @@ const Board: React.FC<BoardProps> = ({
             const taskCount = laneTaskCount(lane.key);
             const progress = getLaneProgress(lane.key);
             const isCollapsed = isLaneCollapsed(lane.key, lane.milestone);
+            const laneMilestone = lane.milestone
+              ? milestoneEntities.find((milestone) => milestone.id === lane.milestone)
+              : undefined;
+            const laneDescription = laneMilestone ? getMilestoneDescription(laneMilestone) : '';
 
             return (
               <div key={lane.key} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/20 overflow-clip">
@@ -551,7 +559,8 @@ const Board: React.FC<BoardProps> = ({
                     onClick={() => toggleLaneCollapse(lane.key, lane.milestone)}
                     className={`w-full flex items-center justify-between gap-4 px-4 py-3 bg-gray-100/80 dark:bg-gray-800/60 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 group ${!isCollapsed ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
                   >
-                    <div className="sticky left-4 flex items-center gap-3 min-w-0">
+                    <div className="sticky left-4 min-w-0 text-left">
+                    <div className="flex items-center gap-3 min-w-0">
                       <svg
                         className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isCollapsed ? '' : 'rotate-90'}`}
                         fill="none"
@@ -566,6 +575,18 @@ const Board: React.FC<BoardProps> = ({
                       <span className="shrink-0 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors duration-200">
                         {taskCount}
                       </span>
+                      {laneMilestone?.dueDate && (
+                        <MilestoneDueDateBadge dueDate={laneMilestone.dueDate} isCompleted={progress === 100} />
+                      )}
+                    </div>
+                    {laneDescription && (
+                      <p
+                        className="mt-1 ml-7 max-w-3xl truncate text-sm font-normal text-gray-600 dark:text-gray-400"
+                        title={laneDescription}
+                      >
+                        {laneDescription}
+                      </p>
+                    )}
                     </div>
 
                     {/* Mini progress bar */}
@@ -586,7 +607,7 @@ const Board: React.FC<BoardProps> = ({
                 {/* Lane content - columns */}
                 {!isCollapsed && (
                   <div className="p-4">
-                    <div className="flex gap-4" style={{ maxHeight: LANE_MAX_HEIGHT }}>
+                    <div className="flex justify-center gap-4" style={{ maxHeight: LANE_MAX_HEIGHT }}>
                       {statuses.map((status) => (
                         <div key={`${lane.key}-${status}`} className="shrink-0 min-h-0" style={{ width: BOARD_COLUMN_WIDTH }}>
                           <TaskColumn
@@ -621,7 +642,7 @@ const Board: React.FC<BoardProps> = ({
         </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-x-auto pb-2">
-          <div className="flex flex-row flex-nowrap gap-4 w-full h-full">
+          <div className="flex flex-row flex-nowrap justify-center gap-4 w-max min-w-full h-full">
             {statuses.map((status) => (
               <div key={status} className="shrink-0 h-full min-h-0" style={{ width: BOARD_COLUMN_WIDTH }}>
                 <TaskColumn
